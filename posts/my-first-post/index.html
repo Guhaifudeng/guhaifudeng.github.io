@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>基于DL的NLP技术路线分析及相关材料 | My New Hugo Site</title>
+<meta name="keywords" content="">
+<meta name="description" content="基于DL的NLP技术路线分析及相关材料v1.0222 声明:本文档内容仅是个人理解，不对术语的专业性负责，仅供参考。
+1 DL NLP技术范式简史 深度学习在自然语言处理领域的技术范式可分为以下四个阶段：
+第一阶段，词/字向量&#43;特定任务网络结构设计
+侧重点：特定任务的网络设计&#43;数据工程
+代表模型: 阅读理解任务的BiDAF、QANET;文本匹配的DSSM、ARC-I;机器翻译的nmt等
+第二阶段，基于BERT&#43;特定任务输出层网络结构设计
+侧重点：目标函数的设计&#43;数据工程
+代表模型：BERT、MacBert、XLNET等
+出发点：
+语义任务的解决，需要复杂的网络； 复杂的网络，需要更高的标注数据成本； 采用有监督的语言模型进行预训练，可以降低数据成本并提升性能。 第三阶段，基于LLM(大规模语言模型)的面向目标任务形式prompt工程
+侧重点:prompt工程&#43;多任务学习&#43;数据工程
+代表模型:GODEL、UIE等
+出发点：
+目标任务没有很好地利用语言模型的性能 LLM模型微调成本高 从适应下游任务转变为适应语言模型，以实现多任务学习的一般化（又名:统一建模） 第四阶段，面向instruct的LLM的任务学习能力
+侧重点:任务迁移&#43;安全性&#43;数据工程
+代表模型：T0、FLAN、instructGPT、SUP-NATINST等
+出发点：
+语言模型具备跨任务能力迁移的能力 跨任务的能力习得需要更多的数据（相比于预训练数据规模太小了） 数据增强的两个思路： 基于instruct学习的方式重构更多的任务，如SUP-NATINST 直接基于instruct进行仿人类回复，如instructGPT 对AI系统的可解释性和安全性提出要求 2 语言模型 概述论文
+A Survey of Transformers [2021]
+https://export.arxiv.org/pdf/2106.04554.pdf
+Efficient Transformers: A Survey [2020]
+http://export.arxiv.org/pdf/2009.06732v3.pdf
+Pre-Trained Models: Past, Present and Future [2021]
+https://export.arxiv.org/pdf/2106.07139.pdf
+A Survey on Knowledge-Enhanced Pre-trained Language Models [2022]
+https://export.arxiv.org/pdf/2212.13428v1.pdf
+Recent Advances in Natural Language Processing via Large Pre-Trained Language Models: A Survey [2021]">
+<meta name="author" content="">
+<link rel="canonical" href="http://example.org/posts/my-first-post/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="http://example.org/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://example.org/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://example.org/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://example.org/apple-touch-icon.png">
+<link rel="mask-icon" href="http://example.org/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="基于DL的NLP技术路线分析及相关材料" />
+<meta property="og:description" content="基于DL的NLP技术路线分析及相关材料v1.0222 声明:本文档内容仅是个人理解，不对术语的专业性负责，仅供参考。
+1 DL NLP技术范式简史 深度学习在自然语言处理领域的技术范式可分为以下四个阶段：
+第一阶段，词/字向量&#43;特定任务网络结构设计
+侧重点：特定任务的网络设计&#43;数据工程
+代表模型: 阅读理解任务的BiDAF、QANET;文本匹配的DSSM、ARC-I;机器翻译的nmt等
+第二阶段，基于BERT&#43;特定任务输出层网络结构设计
+侧重点：目标函数的设计&#43;数据工程
+代表模型：BERT、MacBert、XLNET等
+出发点：
+语义任务的解决，需要复杂的网络； 复杂的网络，需要更高的标注数据成本； 采用有监督的语言模型进行预训练，可以降低数据成本并提升性能。 第三阶段，基于LLM(大规模语言模型)的面向目标任务形式prompt工程
+侧重点:prompt工程&#43;多任务学习&#43;数据工程
+代表模型:GODEL、UIE等
+出发点：
+目标任务没有很好地利用语言模型的性能 LLM模型微调成本高 从适应下游任务转变为适应语言模型，以实现多任务学习的一般化（又名:统一建模） 第四阶段，面向instruct的LLM的任务学习能力
+侧重点:任务迁移&#43;安全性&#43;数据工程
+代表模型：T0、FLAN、instructGPT、SUP-NATINST等
+出发点：
+语言模型具备跨任务能力迁移的能力 跨任务的能力习得需要更多的数据（相比于预训练数据规模太小了） 数据增强的两个思路： 基于instruct学习的方式重构更多的任务，如SUP-NATINST 直接基于instruct进行仿人类回复，如instructGPT 对AI系统的可解释性和安全性提出要求 2 语言模型 概述论文
+A Survey of Transformers [2021]
+https://export.arxiv.org/pdf/2106.04554.pdf
+Efficient Transformers: A Survey [2020]
+http://export.arxiv.org/pdf/2009.06732v3.pdf
+Pre-Trained Models: Past, Present and Future [2021]
+https://export.arxiv.org/pdf/2106.07139.pdf
+A Survey on Knowledge-Enhanced Pre-trained Language Models [2022]
+https://export.arxiv.org/pdf/2212.13428v1.pdf
+Recent Advances in Natural Language Processing via Large Pre-Trained Language Models: A Survey [2021]" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://example.org/posts/my-first-post/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-07-07T11:49:51+08:00" />
+<meta property="article:modified_time" content="2023-07-07T11:49:51+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="基于DL的NLP技术路线分析及相关材料"/>
+<meta name="twitter:description" content="基于DL的NLP技术路线分析及相关材料v1.0222 声明:本文档内容仅是个人理解，不对术语的专业性负责，仅供参考。
+1 DL NLP技术范式简史 深度学习在自然语言处理领域的技术范式可分为以下四个阶段：
+第一阶段，词/字向量&#43;特定任务网络结构设计
+侧重点：特定任务的网络设计&#43;数据工程
+代表模型: 阅读理解任务的BiDAF、QANET;文本匹配的DSSM、ARC-I;机器翻译的nmt等
+第二阶段，基于BERT&#43;特定任务输出层网络结构设计
+侧重点：目标函数的设计&#43;数据工程
+代表模型：BERT、MacBert、XLNET等
+出发点：
+语义任务的解决，需要复杂的网络； 复杂的网络，需要更高的标注数据成本； 采用有监督的语言模型进行预训练，可以降低数据成本并提升性能。 第三阶段，基于LLM(大规模语言模型)的面向目标任务形式prompt工程
+侧重点:prompt工程&#43;多任务学习&#43;数据工程
+代表模型:GODEL、UIE等
+出发点：
+目标任务没有很好地利用语言模型的性能 LLM模型微调成本高 从适应下游任务转变为适应语言模型，以实现多任务学习的一般化（又名:统一建模） 第四阶段，面向instruct的LLM的任务学习能力
+侧重点:任务迁移&#43;安全性&#43;数据工程
+代表模型：T0、FLAN、instructGPT、SUP-NATINST等
+出发点：
+语言模型具备跨任务能力迁移的能力 跨任务的能力习得需要更多的数据（相比于预训练数据规模太小了） 数据增强的两个思路： 基于instruct学习的方式重构更多的任务，如SUP-NATINST 直接基于instruct进行仿人类回复，如instructGPT 对AI系统的可解释性和安全性提出要求 2 语言模型 概述论文
+A Survey of Transformers [2021]
+https://export.arxiv.org/pdf/2106.04554.pdf
+Efficient Transformers: A Survey [2020]
+http://export.arxiv.org/pdf/2009.06732v3.pdf
+Pre-Trained Models: Past, Present and Future [2021]
+https://export.arxiv.org/pdf/2106.07139.pdf
+A Survey on Knowledge-Enhanced Pre-trained Language Models [2022]
+https://export.arxiv.org/pdf/2212.13428v1.pdf
+Recent Advances in Natural Language Processing via Large Pre-Trained Language Models: A Survey [2021]"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "http://example.org/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "基于DL的NLP技术路线分析及相关材料",
+      "item": "http://example.org/posts/my-first-post/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "基于DL的NLP技术路线分析及相关材料",
+  "name": "基于DL的NLP技术路线分析及相关材料",
+  "description": "基于DL的NLP技术路线分析及相关材料v1.0222 声明:本文档内容仅是个人理解，不对术语的专业性负责，仅供参考。\n1 DL NLP技术范式简史 深度学习在自然语言处理领域的技术范式可分为以下四个阶段：\n第一阶段，词/字向量+特定任务网络结构设计\n侧重点：特定任务的网络设计+数据工程\n代表模型: 阅读理解任务的BiDAF、QANET;文本匹配的DSSM、ARC-I;机器翻译的nmt等\n第二阶段，基于BERT+特定任务输出层网络结构设计\n侧重点：目标函数的设计+数据工程\n代表模型：BERT、MacBert、XLNET等\n出发点：\n语义任务的解决，需要复杂的网络； 复杂的网络，需要更高的标注数据成本； 采用有监督的语言模型进行预训练，可以降低数据成本并提升性能。 第三阶段，基于LLM(大规模语言模型)的面向目标任务形式prompt工程\n侧重点:prompt工程+多任务学习+数据工程\n代表模型:GODEL、UIE等\n出发点：\n目标任务没有很好地利用语言模型的性能 LLM模型微调成本高 从适应下游任务转变为适应语言模型，以实现多任务学习的一般化（又名:统一建模） 第四阶段，面向instruct的LLM的任务学习能力\n侧重点:任务迁移+安全性+数据工程\n代表模型：T0、FLAN、instructGPT、SUP-NATINST等\n出发点：\n语言模型具备跨任务能力迁移的能力 跨任务的能力习得需要更多的数据（相比于预训练数据规模太小了） 数据增强的两个思路： 基于instruct学习的方式重构更多的任务，如SUP-NATINST 直接基于instruct进行仿人类回复，如instructGPT 对AI系统的可解释性和安全性提出要求 2 语言模型 概述论文\nA Survey of Transformers [2021]\nhttps://export.arxiv.org/pdf/2106.04554.pdf\nEfficient Transformers: A Survey [2020]\nhttp://export.arxiv.org/pdf/2009.06732v3.pdf\nPre-Trained Models: Past, Present and Future [2021]\nhttps://export.arxiv.org/pdf/2106.07139.pdf\nA Survey on Knowledge-Enhanced Pre-trained Language Models [2022]\nhttps://export.arxiv.org/pdf/2212.13428v1.pdf\nRecent Advances in Natural Language Processing via Large Pre-Trained Language Models: A Survey [2021]",
+  "keywords": [
+    
+  ],
+  "articleBody": "基于DL的NLP技术路线分析及相关材料v1.0222 声明:本文档内容仅是个人理解，不对术语的专业性负责，仅供参考。\n1 DL NLP技术范式简史 深度学习在自然语言处理领域的技术范式可分为以下四个阶段：\n第一阶段，词/字向量+特定任务网络结构设计\n侧重点：特定任务的网络设计+数据工程\n代表模型: 阅读理解任务的BiDAF、QANET;文本匹配的DSSM、ARC-I;机器翻译的nmt等\n第二阶段，基于BERT+特定任务输出层网络结构设计\n侧重点：目标函数的设计+数据工程\n代表模型：BERT、MacBert、XLNET等\n出发点：\n语义任务的解决，需要复杂的网络； 复杂的网络，需要更高的标注数据成本； 采用有监督的语言模型进行预训练，可以降低数据成本并提升性能。 第三阶段，基于LLM(大规模语言模型)的面向目标任务形式prompt工程\n侧重点:prompt工程+多任务学习+数据工程\n代表模型:GODEL、UIE等\n出发点：\n目标任务没有很好地利用语言模型的性能 LLM模型微调成本高 从适应下游任务转变为适应语言模型，以实现多任务学习的一般化（又名:统一建模） 第四阶段，面向instruct的LLM的任务学习能力\n侧重点:任务迁移+安全性+数据工程\n代表模型：T0、FLAN、instructGPT、SUP-NATINST等\n出发点：\n语言模型具备跨任务能力迁移的能力 跨任务的能力习得需要更多的数据（相比于预训练数据规模太小了） 数据增强的两个思路： 基于instruct学习的方式重构更多的任务，如SUP-NATINST 直接基于instruct进行仿人类回复，如instructGPT 对AI系统的可解释性和安全性提出要求 2 语言模型 概述论文\nA Survey of Transformers [2021]\nhttps://export.arxiv.org/pdf/2106.04554.pdf\nEfficient Transformers: A Survey [2020]\nhttp://export.arxiv.org/pdf/2009.06732v3.pdf\nPre-Trained Models: Past, Present and Future [2021]\nhttps://export.arxiv.org/pdf/2106.07139.pdf\nA Survey on Knowledge-Enhanced Pre-trained Language Models [2022]\nhttps://export.arxiv.org/pdf/2212.13428v1.pdf\nRecent Advances in Natural Language Processing via Large Pre-Trained Language Models: A Survey [2021]\nhttps://export.arxiv.org/pdf/2111.01243.pdf\nLARGE LANGUAGE MODELS ARE HUMAN-LEVELPROMPT ENGINEERS [2022]\nhttps://export.arxiv.org/pdf/2211.01910v1.pdf\nA Survey on Transformers in Reinforcement Learning [2023]\nhttps://export.arxiv.org/pdf/2301.03044v1.pdf\nTransformers in Vision: A Survey [2022]\nhttps://arxiv.org/abs/2101.01169v5\nTransformer模型大盘点2023版｜前Quora工程副总裁（超长）\nhttps://hub.baai.ac.cn/view/24175\nhttps://amatriain.net/blog/transformer-models-an-introduction-and-catalog-2d1e9039f376/\n代表论文\nLanguage Models are Few-Shot Learners\nhttps://arxiv.org/pdf/2005.14165.pdf\n**(很重要)**T5:Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer\n​\thttps://arxiv.org/abs/1910.10683\n​\thttps://github.com/google-research/text-to-text-transfer-transformer\nThe C4 dataset we created for unsupervised pre-training is available in TensorFlow Datasets, but it requires a significant amount of bandwidth for downloading the raw Common Crawl scrapes (~7 TB) and compute for its preparation (~335 CPU-days)\nExT5: Towards Extreme Multi-Task Scaling for Transfer Learning\nhttps://arxiv.org/abs/2111.10952\n开源模型或代码\nChatYuan: 元语功能型对话大模型\nhttps://github.com/clue-ai/ChatYuan\nhttps://mp.weixin.qq.com/s/-axa6XcjGl_Koeq_OrDq8w\nhttps://github.com/clue-ai/PromptCLUE\nhttps://github.com/clue-ai/clueai-python\nChatYuan-v2\n20230324更新： ChatYuan开源模型大升级，效果明显提升 ChatYuan-large-v2是ChatYuan系列中以轻量化实现高质量效果的模型之一，支持输入输出总长度最长4k，用户可以在消费级显卡、 PC甚至手机上进行推理（INT4 最低只需 400M ）。 欢迎体验使用 1. 开源项目：https://github.com/clue-ai/ChatYuan 2. 开源模型hf地址：https://huggingface.co/ClueAI/ChatYuan-large-v2 3. 开源模型ms地址：https://modelscope.cn/models/ClueAI/ChatYuan-large-v2/summary 4. 模型hf体验地址（推荐）：https://huggingface.co/spaces/ClueAI/ChatYuan-large-v2 5. 模型ms体验地址（暂时有问题）：https://modelscope.cn/studios/ClueAI/ChatYuan-large-v2/summary GPT相关 https://github.com/Morizeyao/GPT2-Chinese\nhttps://github.com/Guhaifudeng/gpt-2\nT5英文版 T5第一版本仅支持英文，后退出多语言版本mT5–观察词表\nhttps://huggingface.co/t5-large\nhttps://huggingface.co/google/mt5-large\nhttps://huggingface.co/google/flan-t5-large\nhttps://github.com/google-research/text-to-text-transfer-transformer/blob/main/released_checkpoints.md\nT5中文版本 T5中文替代品:\nExploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer\nhttps://huggingface.co/IDEA-CCNL/Randeng-T5-784M　项目地址\nhttps://huggingface.co/TsinghuaAI/CPM-Generate\nhttps://huggingface.co/IDEA-CCNL/Randeng-T5-784M-MultiTask-Chinese\nhttps://huggingface.co/IDEA-CCNL/Randeng-T5-784M-QA-Chinese\nhttps://github.com/IDEA-CCNL/Fengshenbang-LM/tree/main/fengshen/examples/qa_t5\nhttps://github.com/bojone/t5_in_bert4keras\nhttps://arxiv.org/abs/1912.08777 https://github.com/shuxinyin/T5-NLP\nBART相关\nBART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension\nhttps://huggingface.co/fnlp/bart-large-chinese\nhttps://github.com/fastnlp/CPT\nhttps://github.com/facebookresearch/fairseq/tree/main/examples/bart\n（重要）线性语言模型RWKV 采用RNN实现，效率和性能接近于线性Transformer https://github.com/BlinkDL/RWKV-LM (explanation, fine-tuning, training, etc.) RetGen: A Joint framework for Retrieval and Grounded Text Generation Modeling\nhttps://github.com/dreasysnail/RetGen\nhttps://pypi.org/project/rwkvstic/ Easy pip package (with 8bit \u0026 offload for low VRAM GPUs)\nhttps://github.com/harrisonvanderbyl/rwkv_chatbot Chatbot using rwkvstic\nhttps://github.com/gururise/rwkv_gradio RWKV Gradio\nhttps://github.com/mrsteyk/RWKV-LM-deepspeed Another training fork\nhttps://github.com/Blealtan/RWKV-LM-LoRA LoRA fine-tuning\nhttps://github.com/wozeparrot/tinyrwkv RWKV in tinygrad (nice simple DL framework)\nhuggingface/transformers#17230 RWKV HF package (WIP)\nhttps://github.com/ArEnSc/Production-RWKV RWKV HF package source\nhttps://github.com/nlpodyssey/verbaflow RWKV in Go\nhttps://github.com/nlpodyssey/rwkv RWKV in Go\nhttps://github.com/mrsteyk/rwkvk-rs RWKV in Rust\nhttps://github.com/imxcstar/CSharp-RWKV-V4 RWKV in C#\nhttps://github.com/resloved/RWKV-notebooks RWKV colab notebooks\nhttps://colab.research.google.com/github/harrisonvanderbyl/rwkvstic/blob/master/notebooks/chatbot.ipynb RWKV chatbot colab notebook\nhttps://github.com/Pathos14489/RWKVDistributedInference RWKV Distributed Inference\nhttps://github.com/AXKuhta/rwkv-onnx-dml RWKV ONNX\nhttps://github.com/josephrocca/rwkv-v4-web RWKV-v4 running in the browser (simple demo. greedy decode)\n3 语言模型可解释性 Language Models as Knowledge Bases?\nhttps://github.com/facebookresearch/LAMA\nHow Can We Know What Language Models Know?\nhttps://github.com/jzbjyb/LPAQA\nMaking Pre-trained Language Models Better Few-shot Learners\nWhat Makes Good In-Context Examples for GPT-$3$?\n知晓T5-Large不能做什么\n(重要-生成提示) LARGE LANGUAGE MODELS ARE HUMAN-LEVEL PROMPT ENGINEERS\n大型语言模型是人类级别的提示工程师:考虑采用chatGPT扩展提示\nTextBox: A Unified, Modularized, and Extensible Framework for Text Generation https://github.com/RUCAIBox/TextBox\nRethinking the Role of Demonstrations: What Makes In-Context Learning Work?\nhttps://export.arxiv.org/pdf/2202.12837.pdf\n4 prompt学习范式 概述论文\n(重要)Pre-train, Prompt, and Predict: A Systematic Survey of Prompting Methods in Natural Language Processing http://pretrain.nlpedia.ai/\n代表论文\n(重要)The Power of Scale for Parameter-Efficient Prompt Tuning\nhttps://arxiv.org/abs/2104.08691 https://github.com/kipgparker/soft-prompt-tuning\n解读:https://code84.com/745392.html\n在全量数据情况下，仅微调 prompt 相关的参数，能否媲美甚至超过 fine-tuning 的表现？\n在少量数据情况下，仅微调 prompt 相关的参数，能否媲美甚至超过 fine-tuning 的表现？\n如果能做到上述表现，预训练模型的尺寸是否有影响？是否一定需要超大预训练模型？\n结论：\nprompt tokens选择20词左右 构建好promt按照语言模型的任务训练50K，甚至100K步 prompt token的初始化对结果影响很大 以上策略在1B级别及以下有效，超过10B，影响变小 PPT: Pre-trained Prompt Tuning for Few-shot Learning\nhttps://arxiv.org/abs/2109.04332\nSPoT: Better Frozen Model Adaptation through Soft Prompt Transfer\nhttps://arxiv.org/abs/2110.07904\nZeroPrompt: Scaling Prompt-Based Pretraining to 1,000 Tasks Improves Zero-Shot Generalization]\nhttps://arxiv.org/abs/2201.06910\nExploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer\nhttps://arxiv.org/abs/1910.10683\nUnified Structure Generation for Universal Information Extraction\nhttps://arxiv.org/abs/2203.12277\nMultitask Prompted Training Enables Zero-Shot Task Generalization\nhttps://arxiv.org/abs/2110.08207\nLearning To Retrieve Prompts for In-Context Learning\n开源模型及代码\nOpenPrompt: An Open-source Framework for Prompt-learning\n(重要)Exploring Prompt-based Few-shot Learning for Grounded Dialog Generation\n自动生成Prompt https://github.com/princeton-nlp/LM-BFF\n生成式任务尝试\nhttps://github.com/clue-ai/PromptCLUE\n三大统一：统一模型框架(text-to-text)，统一任务形式(prompt)，统一应用方式(zero-shot/few-shot)。 (T0）\n大规模预训练：在t5-large版基础上，使用数百G中文语料，训练了100万步，累积训练了1.5万亿个中文字词级别token\n大规模任务数据：使用了16种任务类型，数百种任务，累积亿级别任务数据。\n混合预训练：一方面将下游任务作为预训练语料，另一方面将下游任务和预训练语料一起训练，减少任务灾难遗忘以及缩短预训练和下游任务的距离，更好的适应下游任务（ExT5）\n混合采样：针对众多数据量差异极大的任务，采用在每个训练batch内对所有的任务进行按照比例采样，根据任务的数据量进行平滑采样，并且同时限制任务数据量采样池的上限。 平滑采样可以减少任务训练有偏危害，在每一batch内训练可以减少异质任务之间训练负迁移的情况(T5)\n分阶段训练：一方面指在预训练分阶段，涉及训练序列长度的分阶段（128和512），加快预训练速度(Bert)；另一方面，在下游训练分阶段， 涉及学习率和序列长度的变化以及递减式对下游任务的数据量限制，更好的适应下游的不同任务\n增加语言模型的训练：参考t5.1.1, 除了使用Span Corrpution构建的方式进行无监督训练，同时在使用prefix LM的方式训练，增强生成任务的能力(LM adapted)\n增加对模型的encoder以及decoder的训练：根据下游任务数据分别构建Data_text,Data_target预训练数据语料，是加入到预训练中，分别增强模型的encoder理解能力和 decoder的生成能力（见UIE）\n重新构建模型中文字典：使用sentencepiece上在千亿token上学习并构建模型字典，更加符合中文语言习惯\n其他\n扩展论文汇总\n地址:github.com/thunlp/PromptPapers NLP的“第四范式”之Prompt Learning总结：44篇论文逐一梳理\n地址\n基于prompt的新训练范式\n相比之前每个任务定义一套参数，在输入加上特定的信息，不需要改变整个模型的参数，从而提升效率和存储空间。\n传统 pretrain+fintune 的训练方式是有 gap 的，需要从大规模无监督数据训练迁移到下游 finetune 的任务，prompt-based 的方式打破了这个方式。\nPrompt方法综述\nhttps://zhuanlan.zhihu.com/p/431788068\n一文了解预训练模型 Prompt 微调（比较详细）\nhttps://zhuanlan.zhihu.com/p/572970562\n5 文本生成 Evaluation of Text Generation: A Survey [2020]\nhttps://arxiv.org/pdf/2006.14799.pdf\nA Survey of Evaluation Metrics Used for NLG Systems [2020]\nhttp://export.arxiv.org/pdf/2008.12009v2.pdf\n6 生成式对话 开源模型及代码 T5在会话领域的应用 https://huggingface.co/microsoft/GODEL-v1_1-large-seq2seq https://huggingface.co/openbmb/cpm-ant-10b/tree/main\nhttps://huggingface.co/TsinghuaAI/CPM-Generate\n7 基于instruct的多任务学习 代表论文\nCross-Task Generalization via Natural Language Crowdsourcing Instructions Cross-task generalization via natural language crowdsourcing instructions Super-NaturalInstructions:Generalization via Declarative Instructions on 1600+ Tasks\nhttps://github.com/allenai/natural-instructions\nhttps://instructions.apps.allenai.org/\nFLAN:FINETUNED LANGUAGE MODELS ARE ZERO-SHOTLEARNERS http://export.arxiv.org/pdf/2109.01652v5.pdf FLAN：微调语言模型是Zero-Shot学习器 http://www.syrr.cn/news/7832.html 谷歌FLAN-T5作者亲讲：5400亿参数，1800个任务，如何实现大语言模型“自我改进” 地址\nchatGPT相关\n（重要）Survey for In-context Learning\nhttps://arxiv.org/pdf/2301.00234v1.pdf\nWebGPT: Browser-assisted question-answering with human feedback\nhttps://arxiv.org/abs/2112.09332\nLessons Learned on Language Model Safety and Misuse\nhttps://openai.com/blog/language-model-safety-and-misuse/\nstructGPT:Scaling Laws for Reward Model Overoptimization\nhttps://arxiv.org/abs/2210.10760\nLearning to summarize with human feedback\nhttps://proceedings.neurips.cc/paper/2020/hash/1f89885d556929e98d3ef9b86448f951-Abstract.html\n8 chatGPT的prompts chatGPT的英文prompt https://github.com/f/awesome-chatgpt-prompts\nchatGPT的中文prompt\nhttps://github.com/PlexPt/awesome-chatgpt-prompts-zh\nchatGPT技能探索\n9 预训练数据 The Pile: An 800GB Dataset of Diverse Text for Language Modeling https://arxiv.org/abs/2101.00027\nChatGPT 数据集之谜 地址\n10 训练成本分析 样例1 冻结部分参数预训练big model https://huggingface.co/IDEA-CCNL/Randeng-T5-784M\n我们基于mT5-large，训练了它的中文版。为了加速训练，我们仅使用T5分词器(sentence piece)中的中英文对应的词表，并且使用了语料库自适应预训练(Corpus-Adaptive Pre-Training, CAPT)技术在悟道语料库(180G版本)继续预训练。预训练目标为破坏span。具体地，我们在预训练阶段中使用了封神框架大概花费了16张A100约96小时。\n使用评估网站：https://www.autodl.com/home\n上述训练花费代价(采用16张A100训练180G语料-仅仅训练了词表的embedding，详见论文)：7.98元/h x 16 x 96=12257.28元\n样例2 全部参数预训练 big model https://www.zhiu.cn/156272.html 11 大规模语言模型训练框架 DeepSpeed https://www.deepspeed.ai/ ColossalAI https://github.com/hpcaitech/ColossalAI 12 针对chatGPT的训练过程复现 样例\ncolossal-ai-chatgpt Open source solution replicates ChatGPT training process! Ready to go with only 1.6GB GPU memory and gives you 7.73 times faster training!\nhttps://www.hpc-ai.tech/blog/colossal-ai-chatgpt\n基于情感分类的类chatGPT训练\n完整源码在这里：\nhttps://github.com/HarderThenHarder/transformers_tasks/tree/main/RLHF\n重要思路\n完全从零实现chatGPT-Andrej Karpathy B站搬运 https://space.bilibili.com/3129054/channel/collectiondetail?sid=874339 课程主页:https://github.com/karpathy/nn-zero-to-hero 重点项目::https://github.com/karpathy/nanoGPT\n大型语言模型的能力分析与应用　邱锡鹏复旦大学 https://www.bilibili.com/video/BV1Tx4y1w78p\n13 强化学习方法介绍 Illustrating Reinforcement Learning from Human Feedback (RLHF) https://huggingface.co/blog/rlhf 14 chatGPT技术思考 ChatGPT 背后的“功臣”——RLHF 技术详解 地址 解读 ChatGPT 背后的技术重点：RLHF、IFT、CoT、红蓝对抗 地址\n(重要)What Makes a Dialog Agent Useful? https://huggingface.co/blog/dialog-agents\n红蓝对抗 (red-teaming) https://arxiv.org/abs/2209.07858\n张栋：ChatGPT 制胜公式 https://hub.baai.ac.cn/view/24166\n(重要)How does GPT Obtain its Ability? Tracing Emergent Abilities of Language Models to their Sources\nhttps://yaofu.notion.site/How-does-GPT-Obtain-its-Ability-Tracing-Emergent-Abilities-of-Language-Models-to-their-Sources-b9a57ac0fcf74f30a1ab9e3e36fa1dc1\n(重要)Chain of Thought Prompting Elicits Reasoning in Large Language Models\nhttps://arxiv.org/pdf/2201.11903v1.pdf\n深入理解语言模型的突现能力\nhttps://yaofu.notion.site/514f4e63918749398a1a8a4c660e0d5b\n15 chatGPT影响 联想CTO芮勇：AI大模型为智能化变革带来的机遇和挑战\nhttps://hub.baai.ac.cn/view/24171\nReid Hoffman｜相信自己，其实你比想象中更有准备\n中金 | AI十年展望（五）：从ChatGPT到通用智能，新长征上的新变化 地址\nAIGC：ChatGPT(一个里程碑式的对话聊天机器人)的简介(意义/功能/核心技术等)、使用方法(七类任务)、案例应用(提问基础性/事实性/逻辑性/创造性/开放性的问题以及编程相关)之详细攻略 地址\n人工智能行业ChatGPT专题研究：开启AI新纪元.pdf https://www.vzkoo.com/document/2023020328d4913255f87e4c853de0b8.html\nhttps://hub.baai.ac.cn/view/24173\n16 Attention相关 测试两种新 Attention 机制：gMLP 和 AFT（结论：AFT 效果好） https://zhuanlan.zhihu.com/p/395005917?utm_id=0\nRWKV is inspired by Apple’s AFT (https://arxiv.org/abs/2105.14103).\nMoreover it’s using a number of my tricks, such as:\nSmallInitEmb: https://github.com/BlinkDL/SmallInitEmb (applicable to all transformers) which helps the embedding quality, and stabilizes Post-LN (which is what I am using). Token-shift: https://github.com/BlinkDL/RWKV-LM#token-shift-time-shift-mixing (applicable to all transformers), especially helpful for char-level models. Head-QK: https://github.com/BlinkDL/RWKV-LM#the-head-qk-trick-learning-to-copy-and-avoid-tokens (applicable to all transformers). Note: it’s helpful, but I disabled it in the Pile model to keep it 100% RNN. Extra R-gate in the FFN (applicable to all transformers). I am also using reluSquared from Primer. Better initilization: I init most of the matrices to ZERO (see RWKV_Init in https://github.com/BlinkDL/RWKV-LM/blob/main/RWKV-v2-RNN/src/model.py). You can transfer some parameters from a small model to a large model (note: I sort \u0026 smooth them too), for faster and better convergence (see https://www.reddit.com/r/MachineLearning/comments/umq908/r_rwkvv2rnn_a_parallelizable_rnn_with/). My CUDA kernel: https://github.com/BlinkDL/RWKV-CUDA to speedup training. 17 LMaaS思维链 论文概述或集合 Towards Reasoning in Large Language Models: A Survey. https://arxiv.org/abs/2212.10403 A trend starts from “Chain of Thought Prompting Elicits Reasoning in Large Language Models”. https://github.com/Timothyxxx/Chain-of-ThoughtsPapers 代表论文 思维链提示 (Wei 等, ‘22): https://arxiv.org/abs/2201.11903 Let’s think step by step: https://arxiv.org/abs/2205.11916 CoT 图解示例 (Chung 等, ‘22): https://arxiv.org/abs/2210.11416 CoT 微调也显示出对无害性非常有效 (Bai 等, ‘22): https://www.anthropic.com/constitutional.pdf Large Language Models Are Reasoning Teachers. https://arxiv.org/abs/2212.10071 开放模型及代码 Automatic Chain of Thought Prompting in Large Language Models https://github.com/amazon-science/auto-cot 18 LMaaS安全性 Unnatural Instructions (Honovich 等, ‘22): https://arxiv.org/abs/2212.09689 Super-natural instructions (Wang 等, ‘22): https://arxiv.org/abs/2204.07705 Self-Instruct (Wang 等, ‘22): https://arxiv.org/abs/2212.10560 T0 (Sanh 等, ‘22): https://arxiv.org/abs/2110.08207 Natural instructions 数据集 (Mishra 等, ‘22): https://arxiv.org/abs/2104.08773 FLAN LM (Wei 等, ‘22): https://arxiv.org/abs/2109.01652 OPT-IML (Iyer 等, ‘22): https://arxiv.org/abs/2212.12017 19 对话机器人产品 Meta 的 BlenderBot: https://arxiv.org/abs/2208.03188 Google 的 LaMDA: https://arxiv.org/abs/2201.08239 DeepMind 的 Sparrow: https://arxiv.org/abs/2209.14375 Anthropic 的 Assistant: https://arxiv.org/abs/2204.05862 20 对话数据集 三个数据集： （１）闲聊　（２）基于文档的问题回复　Dureader Dureader*checklist*阅读理解细粒度评估数据集–不可能的直接给文档\n​\tDuReader*robust*阅读理解鲁棒性数据集\n（３）多轮会话语料\n​\tDuLeMon中文长时记忆对话数据集\n​\tDiamante中文开放域闲聊数据集\n​\tDuSinc服务信息增强对话数据集\n​\tCrossWOZ\n​\thttps://github.com/thu-coai/CrossWOZ\n21 其他人总结chatGPT 关于ChatGPT的预训练和调优方法的必读论文、相关博客和API工具。 https://chatgpt.pro/ https://github.com/shizhediao/ChatGPTPapers 已声明类chatGPT内测阶段的机构或公司 京东 百度 阿里 腾讯 chatYuan 复旦 22 多技能对话 任务型对话\nA Large-Scale Benchmark for Chinese Goal-oriented Dialog Evaluation\nEstimating Soft Labels for Out-of-Domain Intent Detection\n表格型对话\nSTAR: SQL Guided Pre-Training for Context-dependent Text-to-SQL Parsing\nTowards Generalizable and Robust Text-to-SQL Parsing\n文档型对话\nTowards Generalized Open Information Extraction\nDoc2Bot: Accessing Heterogeneous Documents via Conversational Bots\n多模态对话\n对话系统的终身学习\nPrompt Conditioned VAE: Enhancing Generative Replay for Lifelong Learning in Task-Oriented Dialogue\nSemi-Supervised Lifelong Language Learning\n23 知识型对话 动态知识对话\nSINC: Service Information Augmented Open-Domain Conversation 又名:Link the World: Improving Open-domain Conversation with Dynamic Spatiotemporal-aware Knowledge https://arxiv.org/pdf/2206.14000v2.pdf 显式目标对话\nDuConv: Proactive Human-Machine Conversation with Explicit Conversation Goals https://arxiv.org/pdf/1906.05572v2.pdf 知识对话\nKdConv: A Chinese Multi-domain Dialogue Dataset Towards Multi-turn Knowledge-driven Conversation https://arxiv.org/pdf/2004.04100v1.pdf\nKPT: Keyword-guided Pre-training for Grounded Dialog Generation\n24 对话表示学习 dial2vec: Self-Guided Contrastive Learning of Unsupervised Dialogue Embeddings\nhttps://arxiv.org/abs/2210.15332v1\nhttps://github.com/AlibabaResearch/DAMO-ConvAI/tree/main/dial2vec\n25 国内大厂对话系统实验室 达摩院的SPACE SPACE-1: https://arxiv.org/abs/2111.14592 SPACE-2: https://arxiv.org/abs/2209.06638 SPACE-3: https://arxiv.org/abs/2209.06664 相关代码：https://github.com/AlibabaResearch/DAMO-ConvAI 百度的Knover PLATO-1\nPLATO-2\nPLATO-XL\nPLATO-KAG(PLATO-K)\nMarch 2022: We are opening PLATO-KAG, an unsupervised learning approach for end-to-end knowledge-grounded conversation modeling. February 2022: We are opening our TOD-DA dataset, models and code in DSTC10-Track2. December 2021: We are opening the dialogue generation model of PLATO-XL, with up to 11 billion parameters. October 2021: We are opening AG-DST, an amendable generation for dialogue state tracking. February 2021: We are opening our implementation (Team 19) in DSTC9-Track1. July 2020: We are opening PLATO-2, a large-scale generative model with latent space for open-domain dialogue systems. [1] TOD-DA: Towards Boosting the Robustness of Task-oriented Dialogue Modeling on Spoken Conversations\n[2] Learning to Select External Knowledge with Multi-Scale Negative Sampling\n[3] PLATO-KAG: Unsupervised Knowledge-Grounded Conversation via Joint Modeling\n[4] PLATO-XL: Exploring the Large-scale Pre-training of Dialogue Generation\n[5] PLATO: Pre-trained Dialogue Generation Model with Discrete Latent Variable\n腾讯AI lab Dialogue Research https://ai.tencent.com/ailab/nlp/dialogue/\nRetrieval-guided Dialogue Response Generation via a Matching-to-Generation Framework\nhttps://aclanthology.org/D19-1195.pdf\nhttps://github.com/jcyk/seqgen\n26 (工程化)Transformer加速 Efficient Transformers: A Survey\nhttp://export.arxiv.org/pdf/2009.06732v3.pdf\nLarge Transformer Model Inference Optimization https://lilianweng.github.io/posts/2023-01-10-inference-optimization/\nThe Transformer Family Version 2.0 https://lilianweng.github.io/posts/2023-01-27-the-transformer-family-v2/\n(留存)ChatGPT is not all you need. A State of the Art Review of large Generative AI models\n大规模生成模型\n(留存)COLD Decoding: Energy-based Constrained Text Generation with Langevin Dynamics\n约束来控制生成文本的语义或样式\n(留存) Symmetry Teleportation for Accelerated Optimization 提出了一种新的基于参数空间对称性的优化方法（symmetry teleportation），这是在在参数空间上保持损失不变的一组动作，它允许参数移动很大的距离，以提高后续步骤的收敛速度」。本文算法利用了高阶景观几何，但在大多数步骤中只使用梯度信息，从而避免了二阶方法的计算成本。\n(留存)Deep Bidirectional Language-Knowledge Graph Pretraining 知识图谱+语言模型的预训练 https://export.arxiv.org/pdf/2210.09338v2.pdf\n(留存) Are Pre-trained Convolutions Better than Pre-trained Transformers? 不要将预训练的进步与架构的进步混为一谈\nEfficient Deep Learning: A Survey on Making Deep Learning Models Smaller, Faster, and Better\n(重要-精读) FastSeq: Make Sequence Generation Faster The proposed optimization techniques include an attention cache optimization, an efficient algorithm for** detecting repeated n-grams**, and an **asynchronous generation pipeline **with parallel I/O. https://github.com/microsoft/fastseq\n(留存) Query-driven Segment Selection for Ranking Long Documents\n(重要） Understanding and Overcoming the Challenges of Efficient Transformer Quantization. https://github.com/qualcomm-ai-research/transformer-quantization.\nFinetuning Pretrained Transformers into RNNs\nA Primer on Pretrained Multilingual Language Models\n(留存) AMMUS : A Survey of Transformer-based Pretrained Models in Natural Language Processing\nEL-Attention: Memory Efficient Lossless Attention for Generation\n自回归模型转非自回归\nSlotRefine: A Fast Non-Autoregressive Model for Joint Intent Detection and Slot Filling\nIncorporating history and future into non-autoregressive machine translation\n（留存）Non-Autoregressive Neural Machine Translation\nAn Effective Non-Autoregressive Model for Spoken Language Understanding\n（重要）A Study of Non-autoregressive Model for Sequence Generation\nA Survey on Non-Autoregressive Generation for Neural Machine Translation and Beyond\n(重要)Directed Acyclic Transformer for Non-Autoregressive Machine Translation\nhttps://arxiv.org/abs/2205.07459\nlatent-GLAT: Glancing at Latent Variables for Parallel Text Generation\nhttps://github.com/baoy-nlp/latent-glat\nhttps://lilianweng.github.io/posts/2023-01-10-inference-optimization/\n27 低显存运行 ChatRWKV v2 (wip) can split the model to gpu+cpu or gpu+gpu: https://github.com/BlinkDL/ChatRWKV/tree/main/v2 (Stream mode soon) 这个可以把模型分到双卡，或者一部分GPU一部分CPU（适合刚好放不下的情况） 稍后再加 STREAM 模式，在小显存GPU跑大模型（加载几层模型，跑几层，再加载几层，跑几层） 28 问题重写 （重要) Question Rewriting for Conversational Question Answering (2021年)\nhttps://dl.acm.org/doi/pdf/10.1145/3437963.3441748\n对话式问题回答的问题重写\nReinforced Question Rewriting for Conversational Question Answering\nOpen-Domain Question Answering Goes Conversational via Question Rewriting\nhttps://github.com/akaysh/DenseQrecc\nhttps://lrec2022.lrec-conf.org/en/ https://github.com/Orange-OpenSource/COQAR\n(重要)Improving Multi-turn Dialogue Modelling with Utterance ReWriter\nhttps://github.com/liu-nlper/dialogue-utterance-rewriter.git\n(重要-精读)Improving Open-Domain Dialogue Systems via Multi-Turn Incomplete Utterance Restoration (Pan et al., 2019)\nRestoration-200K datasets\nhttps://ai.tencent.com/ailab/nlp/dialogue/datasets/Restoration-200K.zip\n**(重要) Robust Dialogue Utterance Rewriting as Sequence Tagging **\n采用标注–速度加快\nUtterance Rewriting with Contrastive Learning in Multi-turn Dialogue\n(重要)SARG: A Novel Semi Autoregressive Generator for Multi-turn Incomplete Utterance Restoration.\nhttps://github.com/NetEase-GameAI/SARG\nNAG即Non-Autoregressive Model\n其他\n文献综述之语句重写, 看这一篇就够了!\n​\thttps://zhuanlan.zhihu.com/p/405209386\n29 对话系统survey The AI Doctor Is In: A Survey of Task-Oriented Dialogue Systems for Healthcare Applications\n（适合）Recent Neural Methods on Slot Filling and Intent Classification for Task-Oriented Dialogue Systems: A Survey.\nA Survey on Spoken Language Understanding: Recent Advances and New Frontiers\nA Transformer based Multi-task Model for Domain Classification, Intent Detection and Slot-Filling\nMulti-Task Pre-Training for Plug-and-Play(即用即插) Task-Oriented Dialogue System\n即插即用型面向任务对话系统的多任务预训练–第一次见这个提法（转变成自然语言指令任务-采用T5大模型）\nhttps://export.arxiv.org/pdf/2109.14739.pdf\nhttps://github.com/awslabs/pptod\n（适合）Conversational Question Answering: A Survey.\nA survey: Conversational Knowledge Base Question Answering\n30 任务型对话系统 A Large-Scale Benchmark for Chinese Goal-oriented Dialog Evaluation Estimating Soft Labels for Out-of-Domain Intent Detection\nA GuessWhat?! Game for Goal-Oriented Visual Dialog: A Survey\nUser Utterance Acquisition for Training Task-Oriented Bots: A Review of Challenges, Techniques and Opportunities\nEstimating Soft Labels for Out-of-Domain Intent Detection\n(重要－精读)Multi-Task Pre-Training for Plug-and-Play(即用即插) Task-Oriented Dialogue System\nhttps://export.arxiv.org/pdf/2109.14739.pdf\nhttps://github.com/awslabs/pptod\n学习特定任务的微调\nA Unified Multi-task Learning Framework for Multi-goal Conversational Recommender Systems\n31 基于上下文的回复检索 Learning to Detect Relevant Contexts and Knowledge for Response Selection in Retrieval-based Dialogue Systems\nhttps://aichatbot.feishu.cn/file/boxcni2xhINHrIfnIkoEIUTWyGg\nA Sequential Matching Framework for Multi-turn Response Selection in Retrieval-based Chatbots\nhttps://export.arxiv.org/pdf/1710.11344.pdf\n对话表示学习-用于检索\ndial2vec: Self-Guided Contrastive Learning of Unsupervised Dialogue Embeddings\nReasoning With Neural Tensor Networks for Knowledge Base Completion\nhttps://papers.nips.cc/paper/2013/file/b337e84de8752b27eda3a12363109e80-Paper.pdf\nMulti-hop Selector Network for Multi-turn Response Selection in Retrieval-based Chatbots\nhttps://github.com/chunyuanY/Dialogue\n32 Code生成 Repository-Level Prompt Generation for Large Language Models of Code\n33 SQL生成 MIGA: A Unified Multi-task Generation Framework for Conversational Text-to-SQL\nhttps://arxiv.org/pdf/2212.09278.pdf\n34 GPT-4 https://hub.baai.ac.cn/view/24839\n3月14日，Open AI官网发布GPT-4，支持图像和文本输入，效果超越ChatGPT。\nGPT-4 实现了飞跃式提升：强大的识图能力；文字输入限制提升至 2.5 万字；回答准确性显著提高；能够生成歌词、创意文本，实现风格变化。\n官网地址：https://openai.com/product/gpt-4\n论文下载：\nhttps://event-cdn.baai.ac.cn/file/file-browser/BckxAwHQdMdCerFZpXDhhJba6JTWWTZd.pdf\n直播地址：\nhttps://www.youtube.com/watch?v=outcGtbnMuQ\n贡献者： https://openai.com/contributions/gpt-4\n35 ChatGLM：千亿基座的对话模型开启内测 ⸺对应单卡版本开源 ChatGLM-6B 是一个开源的、支持中英双语的对话语言模型，基于 General Language Model (GLM) 架构，具有 62 亿参数。结合模型量化技术，用户可以在消费级的显卡上进行本地部署（INT4 量化级别下最低只需 6GB 显存）。ChatGLM-6B 使用了和 ChatGPT 相似的技术，针对中文问答和对话进行了优化。经过约 1T 标识符的中英双语训练，辅以监督微调、反馈自助、人类反馈强化学习等技术的加持，62 亿参数的 ChatGLM-6B 已经能生成相当符合人类偏好的回答。\n代码链接：https://github.com/THUDM/ChatGLM-6B.git\n具体来说，ChatGLM-6B具备以下特点：\n**充分的中英双语预训练：**ChatGLM-6B在1:1比例的中英语料上训练了1T的token量，兼具双语能力。 **优化的模型架构和大小：**吸取GLM-130B训练经验，修正了二维RoPE位置编码实现，使用传统FFN结构。6B（62亿）的参数大小，也使得研究者和个人开发者自己微调和部署ChatGLM-6B成为可能。 **较低的部署门槛：**FP16 半精度下，ChatGLM-6B 需要至少 13 GB 的显存进行推理，结合模型量化技术，这一需求可以进一步降低到 10GB（INT8） 和 6GB（INT4），使得 ChatGLM-6B 可以部署在消费级显卡上。 **更长的序列长度：**相比 GLM-10B（序列长度1024），ChatGLM-6B序列长度达2048，支持更长对话和应用。 **人类意图对齐训练：**使用了监督微调（Supervised Fine-Tuning）、反馈自助（Feedback Bootstrap）、人类反馈强化学习（Reinforcement Learning from Human Feedback）等方式，使模型初具理解人类指令意图的能力。输出格式为markdown，方便展示。 代码调用\n可以通过如下代码调用 ChatGLM-6B 模型来生成对话：\n\u003e\u003e\u003e from transformers import AutoTokenizer, AutoModel \u003e\u003e\u003e tokenizer = AutoTokenizer.from_pretrained(\"THUDM/chatglm-6b\", trust_remote_code=True) \u003e\u003e\u003e model = AutoModel.from_pretrained(\"THUDM/chatglm-6b\", trust_remote_code=True).half().cuda() \u003e\u003e\u003e response, history = model.chat(tokenizer, \"你好\", history=[]) \u003e\u003e\u003e print(response) 你好👋!我是人工智能助手 ChatGLM-6B,很高兴见到你,欢迎问我任何问题。 \u003e\u003e\u003e response, history = model.chat(tokenizer, \"晚上睡不着应该怎么办\", history=history) \u003e\u003e\u003e print(response) 晚上睡不着可能会让你感到焦虑或不舒服,但以下是一些可以帮助你入睡的方法: 1. 制定规律的睡眠时间表:保持规律的睡眠时间表可以帮助你建立健康的睡眠习惯,使你更容易入睡。尽量在每天的相同时间上床,并在同一时间起床。 2. 创造一个舒适的睡眠环境:确保睡眠环境舒适,安静,黑暗且温度适宜。可以使用舒适的床上用品,并保持房间通风。 3. 放松身心:在睡前做些放松的活动,例如泡个热水澡,听些轻柔的音乐,阅读一些有趣的书籍等,有助于缓解紧张和焦虑,使你更容易入睡。 4. 避免饮用含有咖啡因的饮料:咖啡因是一种刺激性物质,会影响你的睡眠质量。尽量避免在睡前饮用含有咖啡因的饮料,例如咖啡,茶和可乐。 5. 避免在床上做与睡眠无关的事情:在床上做些与睡眠无关的事情,例如看电影,玩游戏或工作等,可能会干扰你的睡眠。 6. 尝试呼吸技巧:深呼吸是一种放松技巧,可以帮助你缓解紧张和焦虑,使你更容易入睡。试着慢慢吸气,保持几秒钟,然后缓慢呼气。 如果这些方法无法帮助你入睡,你可以考虑咨询医生或睡眠专家,寻求进一步的建议。 36 多模态学习 https://zhuanlan.zhihu.com/p/582878508\n多模态对话 Multimodal Dialogue Response Generation\n10:59\n图像＋小模型实现思维链\n这一篇： Multimodal Chain-of-Thought Reasoning in Language Models 它 就是设计了2个独立的 transformer，语言的和 图像的，然后把他们在 decoder的输入层做了concat，基于任务再做微调。 没啥新意思，思想跟 知识库适配器 那一篇是一致的。 K-Adapter: Infusing Knowledge into Pre-Trained Models with Adapters. （多知识源挂载的） 该论文提出了一个为多模态设计的概率建模框架 UniDiffuser，除了单向的文生图，还能实现图生文、图文联合生成、无条件图文生成、图文改写等多种功能。\n据悉 GPT-4 将于本周发布，多模态将成为其一大亮点。当前的大语言模型正在成为理解各种模态的通用接口，能够根据不同模态信息来给出回复文本，但大语言模型生成的内容也仅仅局限于文本。另一方面，当前的扩散模型 DALL・E 2、Imagen、Stable Diffusion 等在视觉创作上掀起一场革命，但这些模型仅仅支持文到图的单一跨模态功能，离通用式生成模型还有一定距离。而多模态大模型将能够打通各种模态能力，实现任意模态之间转化，被认为是通用式生成模型的未来发展方向。\n清华大学计算机系朱军教授带领的 TSAIL 团队近期公开的一篇论文《One Transformer Fits All Distributions in Multi-Modal Diffusion at Scale》，率先发布了对多模态生成式模型的一些探索工作，实现了任意模态之间的相互转化。\n论文链接： https://ml.cs.tsinghua.edu.cn/diffusion/unidiffuser.pdf\n开源代码： https://github.com/thu-ml/unidiffuser\n",
+  "wordCount" : "2200",
+  "inLanguage": "en",
+  "datePublished": "2023-07-07T11:49:51+08:00",
+  "dateModified": "2023-07-07T11:49:51+08:00",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://example.org/posts/my-first-post/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "My New Hugo Site",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://example.org/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="http://example.org/" accesskey="h" title="My New Hugo Site (Alt + H)">My New Hugo Site</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title">
+      基于DL的NLP技术路线分析及相关材料
+    </h1>
+    <div class="post-meta"><span title='2023-07-07 11:49:51 +0800 CST'>July 7, 2023</span>
+
+</div>
+  </header> 
+  <div class="post-content"><h1 id="基于dl的nlp技术路线分析及相关材料v10222">基于DL的NLP技术路线分析及相关材料v1.0222<a hidden class="anchor" aria-hidden="true" href="#基于dl的nlp技术路线分析及相关材料v10222">#</a></h1>
+<p><strong>声明:本文档内容仅是个人理解，不对术语的专业性负责，仅供参考。</strong></p>
+<h2 id="1-dl-nlp技术范式简史">1 DL NLP技术范式简史<a hidden class="anchor" aria-hidden="true" href="#1-dl-nlp技术范式简史">#</a></h2>
+<p>深度学习在自然语言处理领域的技术范式可分为以下四个阶段：</p>
+<p><strong>第一阶段，词/字向量+特定任务网络结构设计</strong></p>
+<p>侧重点：特定任务的网络设计+数据工程</p>
+<p>代表模型: 阅读理解任务的<code>BiDAF</code>、<code>QANET</code>;文本匹配的<code>DSSM</code>、<code>ARC-I</code>;机器翻译的<code>nmt</code>等</p>
+<p><strong>第二阶段，基于BERT+特定任务输出层网络结构设计</strong></p>
+<p>侧重点：目标函数的设计+数据工程</p>
+<p>代表模型：<a href="https://arxiv.org/pdf/1810.04805.pdf"><code>BERT</code></a>、<a href="https://arxiv.org/pdf/2004.13922.pdf"><code>MacBert</code></a>、<a href="https://proceedings.neurips.cc/paper/2019/file/dc6a7e655d7e5840e66733e9ee67cc69-Paper.pdf"><code>XLNET</code></a>等</p>
+<p>出发点：</p>
+<ul>
+<li>语义任务的解决，需要复杂的网络；</li>
+<li>复杂的网络，需要更高的标注数据成本；</li>
+<li>采用有监督的语言模型进行预训练，可以降低数据成本并提升性能。</li>
+</ul>
+<p><strong>第三阶段，基于<code>LLM</code>(大规模语言模型)的面向目标任务形式prompt工程</strong></p>
+<p>侧重点:prompt工程+多任务学习+数据工程</p>
+<p>代表模型:<a href=""><code>GODEL</code></a>、<a href="https://universal-ie.github.io/"><code>UIE</code></a>等</p>
+<p>出发点：</p>
+<ul>
+<li>目标任务没有很好地利用语言模型的性能</li>
+<li><code>LLM</code>模型微调成本高</li>
+<li>从适应下游任务转变为适应语言模型，以实现多任务学习的一般化（又名:统一建模）</li>
+</ul>
+<p><strong>第四阶段，面向<code>instruct</code>的<code>LLM</code>的任务学习能力</strong></p>
+<p>侧重点:任务迁移+安全性+数据工程</p>
+<p>代表模型：<a href="https://arxiv.org/abs/2110.08207"><code>T0</code></a>、<a href="https://arxiv.org/abs/2109.01652"><code>FLAN</code></a>、<a href="https://arxiv.org/abs/2203.02155"><code>instructGPT</code></a>、<a href="https://export.arxiv.org/pdf/2204.07705v3.pdf">SUP-NATINST</a>等</p>
+<p>出发点：</p>
+<ul>
+<li>语言模型具备跨任务能力迁移的能力</li>
+<li>跨任务的能力习得需要更多的数据（相比于预训练数据规模太小了）</li>
+<li>数据增强的两个思路：
+<ul>
+<li>基于instruct学习的方式重构更多的任务，如<code>SUP-NATINST</code></li>
+<li>直接基于instruct进行仿人类回复，如<code>instructGPT</code></li>
+</ul>
+</li>
+<li>对AI系统的可解释性和安全性提出要求</li>
+</ul>
+<h2 id="2-语言模型">2 语言模型<a hidden class="anchor" aria-hidden="true" href="#2-语言模型">#</a></h2>
+<ul>
+<li>
+<p><strong>概述论文</strong></p>
+</li>
+<li>
+<p>A Survey of Transformers [2021]</p>
+<p><a href="https://export.arxiv.org/pdf/2106.04554.pdf">https://export.arxiv.org/pdf/2106.04554.pdf</a></p>
+</li>
+<li>
+<p>Efficient Transformers: A Survey [2020]</p>
+<p><a href="http://export.arxiv.org/pdf/2009.06732v3.pdf">http://export.arxiv.org/pdf/2009.06732v3.pdf</a></p>
+</li>
+<li>
+<p>Pre-Trained Models: Past, Present and Future [2021]</p>
+<p><a href="https://export.arxiv.org/pdf/2106.07139.pdf">https://export.arxiv.org/pdf/2106.07139.pdf</a></p>
+</li>
+<li>
+<p>A Survey on Knowledge-Enhanced Pre-trained Language Models [2022]</p>
+<p><a href="https://export.arxiv.org/pdf/2212.13428v1.pdf">https://export.arxiv.org/pdf/2212.13428v1.pdf</a></p>
+</li>
+<li>
+<p>Recent Advances in Natural Language Processing via Large Pre-Trained Language Models: A Survey [2021]</p>
+<p><a href="https://export.arxiv.org/pdf/2111.01243.pdf">https://export.arxiv.org/pdf/2111.01243.pdf</a></p>
+</li>
+<li>
+<p>LARGE LANGUAGE MODELS ARE HUMAN-LEVELPROMPT ENGINEERS [2022]</p>
+<p><a href="https://export.arxiv.org/pdf/2211.01910v1.pdf">https://export.arxiv.org/pdf/2211.01910v1.pdf</a></p>
+</li>
+<li>
+<p>A Survey on Transformers in Reinforcement Learning [2023]</p>
+<p><a href="https://export.arxiv.org/pdf/2301.03044v1.pdf">https://export.arxiv.org/pdf/2301.03044v1.pdf</a></p>
+</li>
+<li>
+<p>Transformers in Vision: A Survey [2022]</p>
+<p><a href="https://arxiv.org/abs/2101.01169v5">https://arxiv.org/abs/2101.01169v5</a></p>
+</li>
+<li>
+<p>Transformer模型大盘点2023版｜前Quora工程副总裁（超长）</p>
+<p><a href="https://hub.baai.ac.cn/view/24175">https://hub.baai.ac.cn/view/24175</a></p>
+<p><a href="https://amatriain.net/blog/transformer-models-an-introduction-and-catalog-2d1e9039f376/">https://amatriain.net/blog/transformer-models-an-introduction-and-catalog-2d1e9039f376/</a></p>
+</li>
+<li>
+<p><strong>代表论文</strong></p>
+</li>
+<li>
+<p>Language Models are Few-Shot Learners</p>
+<p><a href="https://arxiv.org/pdf/2005.14165.pdf">https://arxiv.org/pdf/2005.14165.pdf</a></p>
+</li>
+<li>
+<p>**(很重要)**T5:Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer</p>
+</li>
+</ul>
+<p>​	https://arxiv.org/abs/1910.10683</p>
+<p>​	https://github.com/google-research/text-to-text-transfer-transformer</p>
+<blockquote>
+<p>The <a href="https://www.tensorflow.org/datasets/catalog/c4">C4</a> dataset we created for unsupervised pre-training is available in TensorFlow Datasets, but it 	requires a significant amount of bandwidth for downloading the raw <a href="https://commoncrawl.org/">Common Crawl</a> scrapes (~7 TB) and compute for its preparation (~335 CPU-days)</p>
+</blockquote>
+<ul>
+<li>
+<p>ExT5: Towards Extreme Multi-Task Scaling for Transfer Learning</p>
+<p><a href="https://arxiv.org/abs/2111.10952">https://arxiv.org/abs/2111.10952</a></p>
+</li>
+<li>
+<p><strong>开源模型或代码</strong></p>
+</li>
+<li>
+<p>ChatYuan: 元语功能型对话大模型</p>
+<p><a href="https://github.com/clue-ai/ChatYuan">https://github.com/clue-ai/ChatYuan</a></p>
+<p><a href="https://mp.weixin.qq.com/s/-axa6XcjGl_Koeq_OrDq8w">https://mp.weixin.qq.com/s/-axa6XcjGl_Koeq_OrDq8w</a></p>
+<p><a href="https://github.com/clue-ai/PromptCLUE">https://github.com/clue-ai/PromptCLUE</a></p>
+<p><a href="https://github.com/clue-ai/clueai-python">https://github.com/clue-ai/clueai-python</a></p>
+</li>
+<li>
+<p>ChatYuan-v2</p>
+<pre tabindex="0"><code>20230324更新：
+ChatYuan开源模型大升级，效果明显提升
+ChatYuan-large-v2是ChatYuan系列中以轻量化实现高质量效果的模型之一，支持输入输出总长度最长4k，用户可以在消费级显卡、 PC甚至手机上进行推理（INT4 最低只需 400M ）。
+欢迎体验使用
+1. 开源项目：https://github.com/clue-ai/ChatYuan
+2. 开源模型hf地址：https://huggingface.co/ClueAI/ChatYuan-large-v2
+3. 开源模型ms地址：https://modelscope.cn/models/ClueAI/ChatYuan-large-v2/summary
+4. 模型hf体验地址（推荐）：https://huggingface.co/spaces/ClueAI/ChatYuan-large-v2
+5. 模型ms体验地址（暂时有问题）：https://modelscope.cn/studios/ClueAI/ChatYuan-large-v2/summary
+</code></pre></li>
+<li>
+<p>GPT相关
+<a href="https://github.com/Morizeyao/GPT2-Chinese">https://github.com/Morizeyao/GPT2-Chinese</a></p>
+<p><a href="https://github.com/Guhaifudeng/gpt-2">https://github.com/Guhaifudeng/gpt-2</a></p>
+</li>
+<li>
+<p>T5英文版
+<code>T5</code>第一版本仅支持英文，后退出多语言版本<code>mT5</code>&ndash;观察词表</p>
+<p><a href="https://huggingface.co/t5-large">https://huggingface.co/t5-large</a></p>
+<p><a href="https://huggingface.co/google/mt5-large">https://huggingface.co/google/mt5-large</a></p>
+<p><a href="https://huggingface.co/google/flan-t5-large">https://huggingface.co/google/flan-t5-large</a></p>
+<p><a href="https://github.com/google-research/text-to-text-transfer-transformer/blob/main/released_checkpoints.md">https://github.com/google-research/text-to-text-transfer-transformer/blob/main/released_checkpoints.md</a></p>
+</li>
+<li>
+<p>T5中文版本
+T5中文替代品:</p>
+<p><a href="http://jmlr.org/papers/v21/20-074.html">Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer</a></p>
+<p><a href="https://huggingface.co/IDEA-CCNL/Randeng-T5-784M">https://huggingface.co/IDEA-CCNL/Randeng-T5-784M</a>　<a href="https://github.com/IDEA-CCNL/Fengshenbang-LM">项目地址</a></p>
+<p><a href="https://huggingface.co/TsinghuaAI/CPM-Generate">https://huggingface.co/TsinghuaAI/CPM-Generate</a></p>
+<p><a href="https://huggingface.co/IDEA-CCNL/Randeng-T5-784M-MultiTask-Chinese">https://huggingface.co/IDEA-CCNL/Randeng-T5-784M-MultiTask-Chinese</a></p>
+<p><a href="https://huggingface.co/IDEA-CCNL/Randeng-T5-784M-QA-Chinese">https://huggingface.co/IDEA-CCNL/Randeng-T5-784M-QA-Chinese</a></p>
+<p><a href="https://github.com/IDEA-CCNL/Fengshenbang-LM/tree/main/fengshen/examples/qa_t5">https://github.com/IDEA-CCNL/Fengshenbang-LM/tree/main/fengshen/examples/qa_t5</a></p>
+<p><a href="https://github.com/bojone/t5_in_bert4keras">https://github.com/bojone/t5_in_bert4keras</a></p>
+<p><a href="https://arxiv.org/abs/1912.08777">https://arxiv.org/abs/1912.08777</a>
+<a href="https://github.com/shuxinyin/T5-NLP">https://github.com/shuxinyin/T5-NLP</a></p>
+</li>
+<li>
+<p><em>BART</em>相关</p>
+<p>BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension</p>
+<p><a href="https://huggingface.co/fnlp/bart-large-chinese">https://huggingface.co/fnlp/bart-large-chinese</a></p>
+<p><a href="https://github.com/fastnlp/CPT">https://github.com/fastnlp/CPT</a></p>
+<p><a href="https://github.com/facebookresearch/fairseq/tree/main/examples/bart">https://github.com/facebookresearch/fairseq/tree/main/examples/bart</a></p>
+</li>
+<li>
+<p><strong>（重要）线性语言模型RWKV</strong>
+<strong>采用RNN实现，效率和性能接近于线性Transformer</strong>
+<a href="https://github.com/BlinkDL/RWKV-LM">https://github.com/BlinkDL/RWKV-LM</a> (explanation, fine-tuning, training, etc.)
+RetGen: A Joint framework for Retrieval and Grounded Text Generation Modeling</p>
+<p><a href="https://github.com/dreasysnail/RetGen">https://github.com/dreasysnail/RetGen</a></p>
+<p><a href="https://pypi.org/project/rwkvstic/">https://pypi.org/project/rwkvstic/</a> Easy pip package (with 8bit &amp; offload for low VRAM GPUs)</p>
+<p><a href="https://github.com/harrisonvanderbyl/rwkv_chatbot">https://github.com/harrisonvanderbyl/rwkv_chatbot</a> Chatbot using rwkvstic</p>
+<p><a href="https://github.com/gururise/rwkv_gradio">https://github.com/gururise/rwkv_gradio</a> RWKV Gradio</p>
+<p><a href="https://github.com/mrsteyk/RWKV-LM-deepspeed">https://github.com/mrsteyk/RWKV-LM-deepspeed</a> Another training fork</p>
+<p><a href="https://github.com/Blealtan/RWKV-LM-LoRA">https://github.com/Blealtan/RWKV-LM-LoRA</a> LoRA fine-tuning</p>
+<p><a href="https://github.com/wozeparrot/tinyrwkv">https://github.com/wozeparrot/tinyrwkv</a> RWKV in tinygrad (nice simple DL framework)</p>
+<p>huggingface/transformers#17230 RWKV HF package (WIP)</p>
+<p><a href="https://github.com/ArEnSc/Production-RWKV">https://github.com/ArEnSc/Production-RWKV</a> RWKV HF package source</p>
+<p><a href="https://github.com/nlpodyssey/verbaflow">https://github.com/nlpodyssey/verbaflow</a> RWKV in Go</p>
+<p><a href="https://github.com/nlpodyssey/rwkv">https://github.com/nlpodyssey/rwkv</a> RWKV in Go</p>
+<p><a href="https://github.com/mrsteyk/rwkvk-rs">https://github.com/mrsteyk/rwkvk-rs</a> RWKV in Rust</p>
+<p><a href="https://github.com/imxcstar/CSharp-RWKV-V4">https://github.com/imxcstar/CSharp-RWKV-V4</a> RWKV in<code> C#</code></p>
+<p><a href="https://github.com/resloved/RWKV-notebooks">https://github.com/resloved/RWKV-notebooks</a> RWKV colab notebooks</p>
+<p><a href="https://colab.research.google.com/github/harrisonvanderbyl/rwkvstic/blob/master/notebooks/chatbot.ipynb">https://colab.research.google.com/github/harrisonvanderbyl/rwkvstic/blob/master/notebooks/chatbot.ipynb</a> RWKV chatbot colab notebook</p>
+<p><a href="https://github.com/Pathos14489/RWKVDistributedInference">https://github.com/Pathos14489/RWKVDistributedInference</a> RWKV Distributed Inference</p>
+<p><a href="https://github.com/AXKuhta/rwkv-onnx-dml">https://github.com/AXKuhta/rwkv-onnx-dml</a> RWKV ONNX</p>
+<p><a href="https://github.com/josephrocca/rwkv-v4-web">https://github.com/josephrocca/rwkv-v4-web</a> RWKV-v4 running in the browser (simple demo. greedy decode)</p>
+</li>
+</ul>
+<h2 id="3-语言模型可解释性">3 语言模型可解释性<a hidden class="anchor" aria-hidden="true" href="#3-语言模型可解释性">#</a></h2>
+<ul>
+<li>
+<p>Language Models as Knowledge Bases?</p>
+<p><a href="https://github.com/facebookresearch/LAMA">https://github.com/facebookresearch/LAMA</a></p>
+</li>
+<li>
+<p><strong>How Can We Know What Language Models Know?</strong></p>
+<p><a href="https://github.com/jzbjyb/LPAQA">https://github.com/jzbjyb/LPAQA</a></p>
+</li>
+<li>
+<p><strong>Making Pre-trained Language Models Better Few-shot Learners</strong></p>
+</li>
+<li>
+<p><strong>What Makes Good In-Context Examples for GPT-$3$?</strong></p>
+</li>
+<li>
+<p><strong>知晓T5-Large不能做什么</strong></p>
+</li>
+<li>
+<p><strong>(重要-生成提示) LARGE LANGUAGE MODELS ARE HUMAN-LEVEL PROMPT ENGINEERS</strong></p>
+<p>大型语言模型是人类级别的提示工程师:考虑采用chatGPT扩展提示</p>
+</li>
+<li>
+<p>TextBox: A Unified, Modularized, and Extensible Framework for Text Generation
+<a href="https://github.com/RUCAIBox/TextBox">https://github.com/RUCAIBox/TextBox</a></p>
+</li>
+<li>
+<p>Rethinking the Role of Demonstrations: What Makes In-Context Learning Work?</p>
+<p><a href="https://export.arxiv.org/pdf/2202.12837.pdf">https://export.arxiv.org/pdf/2202.12837.pdf</a></p>
+</li>
+</ul>
+<h2 id="4-prompt学习范式">4 prompt学习范式<a hidden class="anchor" aria-hidden="true" href="#4-prompt学习范式">#</a></h2>
+<ul>
+<li>
+<p><strong>概述论文</strong></p>
+</li>
+<li>
+<p><strong>(重要)Pre-train, Prompt, and Predict: A Systematic Survey of Prompting Methods in Natural Language Processing</strong>
+<a href="http://pretrain.nlpedia.ai/">http://pretrain.nlpedia.ai/</a></p>
+</li>
+<li>
+<p><strong>代表论文</strong></p>
+</li>
+<li>
+<p><strong>(重要)The Power of Scale for Parameter-Efficient Prompt Tuning</strong></p>
+<p><a href="https://arxiv.org/abs/2104.08691">https://arxiv.org/abs/2104.08691</a>
+<a href="https://github.com/kipgparker/soft-prompt-tuning">https://github.com/kipgparker/soft-prompt-tuning</a></p>
+<p>解读:https://code84.com/745392.html</p>
+<p>在全量数据情况下，仅微调 prompt 相关的参数，能否媲美甚至超过 fine-tuning 的表现？</p>
+<p>在少量数据情况下，仅微调 prompt 相关的参数，能否媲美甚至超过 fine-tuning 的表现？</p>
+<p>如果能做到上述表现，预训练模型的尺寸是否有影响？是否一定需要超大预训练模型？</p>
+<p>结论：</p>
+<ul>
+<li>prompt tokens选择20词左右</li>
+<li>构建好promt按照语言模型的任务训练50K，甚至100K步</li>
+<li>prompt token的初始化对结果影响很大</li>
+<li>以上策略在1B级别及以下有效，超过10B，影响变小</li>
+</ul>
+</li>
+<li>
+<p>PPT: Pre-trained Prompt Tuning for Few-shot Learning</p>
+<p><a href="https://arxiv.org/abs/2109.04332">https://arxiv.org/abs/2109.04332</a></p>
+</li>
+<li>
+<p>SPoT: Better Frozen Model Adaptation through Soft Prompt Transfer</p>
+<p><a href="https://arxiv.org/abs/2110.07904">https://arxiv.org/abs/2110.07904</a></p>
+</li>
+<li>
+<p>ZeroPrompt: Scaling Prompt-Based Pretraining to 1,000 Tasks Improves Zero-Shot Generalization]</p>
+<p><a href="https://arxiv.org/abs/2201.06910">https://arxiv.org/abs/2201.06910</a></p>
+</li>
+<li>
+<p>Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer</p>
+<p><a href="https://arxiv.org/abs/1910.10683">https://arxiv.org/abs/1910.10683</a></p>
+</li>
+<li>
+<p>Unified Structure Generation for Universal Information Extraction</p>
+<p><a href="https://arxiv.org/abs/2203.12277">https://arxiv.org/abs/2203.12277</a></p>
+</li>
+<li>
+<p>Multitask Prompted Training Enables Zero-Shot Task Generalization</p>
+<p><a href="https://arxiv.org/abs/2110.08207">https://arxiv.org/abs/2110.08207</a></p>
+</li>
+<li>
+<p>Learning To Retrieve Prompts for In-Context Learning</p>
+</li>
+<li>
+<p><strong>开源模型及代码</strong></p>
+</li>
+<li>
+<p><strong>OpenPrompt: An Open-source Framework for Prompt-learning</strong></p>
+</li>
+<li>
+<p><strong>(重要)Exploring Prompt-based Few-shot Learning for Grounded Dialog Generation</strong></p>
+</li>
+<li>
+<p>自动生成Prompt
+<a href="https://github.com/princeton-nlp/LM-BFF">https://github.com/princeton-nlp/LM-BFF</a></p>
+</li>
+<li>
+<p>生成式任务尝试</p>
+<p><a href="https://github.com/clue-ai/PromptCLUE">https://github.com/clue-ai/PromptCLUE</a></p>
+<ol>
+<li>
+<p>三大统一：统一模型框架(text-to-text)，统一任务形式(prompt)，统一应用方式(zero-shot/few-shot)。 (<a href="https://arxiv.org/abs/2110.08207">T0</a>）</p>
+</li>
+<li>
+<p>大规模预训练：在t5-large版基础上，使用数百G中文语料，训练了100万步，累积训练了1.5万亿个中文字词级别token</p>
+</li>
+<li>
+<p>大规模任务数据：使用了16种任务类型，数百种任务，累积亿级别任务数据。</p>
+</li>
+<li>
+<p>混合预训练：一方面将下游任务作为预训练语料，另一方面将下游任务和预训练语料一起训练，减少任务灾难遗忘以及缩短预训练和下游任务的距离，更好的适应下游任务（<a href="https://arxiv.org/abs/2111.10952">ExT5</a>）</p>
+</li>
+<li>
+<p>混合采样：针对众多数据量差异极大的任务，采用在每个训练batch内对所有的任务进行按照比例采样，根据任务的数据量进行平滑采样，并且同时限制任务数据量采样池的上限。 平滑采样可以减少任务训练有偏危害，在每一batch内训练可以减少异质任务之间训练负迁移的情况(T5)</p>
+</li>
+<li>
+<p>分阶段训练：一方面指在预训练分阶段，涉及训练序列长度的分阶段（128和512），加快预训练速度(Bert)；另一方面，在下游训练分阶段， 涉及学习率和序列长度的变化以及递减式对下游任务的数据量限制，更好的适应下游的不同任务</p>
+</li>
+<li>
+<p>增加语言模型的训练：参考t5.1.1, 除了使用Span Corrpution构建的方式进行无监督训练，同时在使用prefix LM的方式训练，增强生成任务的能力(<a href="https://arxiv.org/abs/1910.10683">LM adapted</a>)</p>
+</li>
+<li>
+<p>增加对模型的encoder以及decoder的训练：根据下游任务数据分别构建Data_text,Data_target预训练数据语料，是加入到预训练中，分别增强模型的encoder理解能力和 decoder的生成能力（见<a href="https://arxiv.org/abs/2203.12277">UIE</a>）</p>
+</li>
+<li>
+<p>重新构建模型中文字典：使用sentencepiece上在千亿token上学习并构建模型字典，更加符合中文语言习惯</p>
+</li>
+</ol>
+</li>
+<li>
+<p><strong>其他</strong></p>
+</li>
+<li>
+<p><strong>扩展论文汇总</strong></p>
+<ul>
+<li>地址:github.com/thunlp/PromptPapers</li>
+</ul>
+</li>
+<li>
+<p>NLP的“第四范式”之Prompt Learning总结：44篇论文逐一梳理</p>
+<p><a href="https://mp.weixin.qq.com/s?__biz=MzIwMTc4ODE0Mw==&amp;mid=2247543504&amp;idx=2&amp;sn=ed724e69ddffe060171816156921b0eb&amp;chksm=96eaf550a19d7c46d1b899f6bc038ec463517d758a6530531ffa0a53c398ce9d038d248f9269&amp;scene=21#wechat_redirect">地址</a></p>
+<p>基于prompt的新训练范式</p>
+<ol>
+<li>
+<p>相比之前每个任务定义一套参数，在输入加上特定的信息，不需要改变整个模型的参数，从而提升效率和存储空间。</p>
+</li>
+<li>
+<p>传统 pretrain+fintune 的训练方式是有 gap 的，需要从大规模无监督数据训练迁移到下游 finetune 的任务，prompt-based 的方式打破了这个方式。</p>
+</li>
+</ol>
+</li>
+<li>
+<p>Prompt方法综述</p>
+<p><a href="https://zhuanlan.zhihu.com/p/431788068">https://zhuanlan.zhihu.com/p/431788068</a></p>
+</li>
+<li>
+<p>一文了解预训练模型 Prompt 微调（比较详细）</p>
+<p><a href="https://zhuanlan.zhihu.com/p/572970562">https://zhuanlan.zhihu.com/p/572970562</a></p>
+</li>
+</ul>
+<h2 id="5-文本生成">5 文本生成<a hidden class="anchor" aria-hidden="true" href="#5-文本生成">#</a></h2>
+<ul>
+<li>
+<p>Evaluation of Text Generation: A Survey [2020]</p>
+<p><a href="https://arxiv.org/pdf/2006.14799.pdf">https://arxiv.org/pdf/2006.14799.pdf</a></p>
+</li>
+<li>
+<p>A Survey of Evaluation Metrics Used for NLG Systems [2020]</p>
+<p><a href="http://export.arxiv.org/pdf/2008.12009v2.pdf">http://export.arxiv.org/pdf/2008.12009v2.pdf</a></p>
+</li>
+</ul>
+<h2 id="6-生成式对话">6 生成式对话<a hidden class="anchor" aria-hidden="true" href="#6-生成式对话">#</a></h2>
+<ul>
+<li>
+<p>开源模型及代码
+T5在会话领域的应用
+<a href="https://huggingface.co/microsoft/GODEL-v1_1-large-seq2seq">https://huggingface.co/microsoft/GODEL-v1_1-large-seq2seq</a>
+<a href="https://huggingface.co/openbmb/cpm-ant-10b/tree/main">https://huggingface.co/openbmb/cpm-ant-10b/tree/main</a></p>
+<p><a href="https://huggingface.co/TsinghuaAI/CPM-Generate">https://huggingface.co/TsinghuaAI/CPM-Generate</a></p>
+</li>
+</ul>
+<h2 id="7-基于instruct的多任务学习">7 基于instruct的多任务学习<a hidden class="anchor" aria-hidden="true" href="#7-基于instruct的多任务学习">#</a></h2>
+<ul>
+<li>
+<p>代表论文</p>
+</li>
+<li>
+<p><strong>Cross-Task Generalization via Natural Language Crowdsourcing Instructions</strong>
+Cross-task generalization via natural language crowdsourcing instructions
+Super-NaturalInstructions:Generalization via Declarative Instructions on 1600+ Tasks</p>
+<p><a href="https://github.com/allenai/natural-instructions">https://github.com/allenai/natural-instructions</a></p>
+<p><a href="https://instructions.apps.allenai.org/">https://instructions.apps.allenai.org/</a></p>
+</li>
+<li>
+<p>FLAN:FINETUNED LANGUAGE MODELS ARE ZERO-SHOTLEARNERS
+<a href="http://export.arxiv.org/pdf/2109.01652v5.pdf">http://export.arxiv.org/pdf/2109.01652v5.pdf</a>
+FLAN：微调语言模型是Zero-Shot学习器
+<a href="http://www.syrr.cn/news/7832.html">http://www.syrr.cn/news/7832.html</a>
+谷歌FLAN-T5作者亲讲：5400亿参数，1800个任务，如何实现大语言模型“自我改进”
+<a href="https://mp.weixin.qq.com/s?__biz=MzI4MDYzNzg4Mw==&amp;mid=2247554093&amp;idx=2&amp;sn=a179a28a66be7956542d42bfe49ff2ee&amp;chksm=ebb72cf9dcc0a5ef3dc7104ec3bc949ac3e288177c38fd161bfaf03ee2b867d9f67ef38786b3&amp;scene=27">地址</a></p>
+</li>
+<li>
+<p><strong>chatGPT相关</strong></p>
+</li>
+<li>
+<p><strong>（重要）Survey for In-context Learning</strong></p>
+<p><a href="https://arxiv.org/pdf/2301.00234v1.pdf">https://arxiv.org/pdf/2301.00234v1.pdf</a></p>
+<p>WebGPT: Browser-assisted question-answering with human feedback</p>
+<p><a href="https://arxiv.org/abs/2112.09332">https://arxiv.org/abs/2112.09332</a></p>
+<p>Lessons Learned on Language Model Safety and Misuse</p>
+<p><a href="https://openai.com/blog/language-model-safety-and-misuse/">https://openai.com/blog/language-model-safety-and-misuse/</a></p>
+<p>structGPT:Scaling Laws for Reward Model Overoptimization</p>
+<p><a href="https://arxiv.org/abs/2210.10760">https://arxiv.org/abs/2210.10760</a></p>
+<p>Learning to summarize with human feedback</p>
+<p><a href="https://proceedings.neurips.cc/paper/2020/hash/1f89885d556929e98d3ef9b86448f951-Abstract.html">https://proceedings.neurips.cc/paper/2020/hash/1f89885d556929e98d3ef9b86448f951-Abstract.html</a></p>
+</li>
+</ul>
+<h2 id="8-chatgpt的prompts">8 chatGPT的prompts<a hidden class="anchor" aria-hidden="true" href="#8-chatgpt的prompts">#</a></h2>
+<ul>
+<li>
+<p>chatGPT的英文prompt
+<a href="https://github.com/f/awesome-chatgpt-prompts">https://github.com/f/awesome-chatgpt-prompts</a></p>
+</li>
+<li>
+<p>chatGPT的中文prompt</p>
+<p><a href="https://github.com/PlexPt/awesome-chatgpt-prompts-zh">https://github.com/PlexPt/awesome-chatgpt-prompts-zh</a></p>
+</li>
+<li>
+<p>chatGPT技能探索</p>
+</li>
+</ul>
+<h2 id="9-预训练数据">9 预训练数据<a hidden class="anchor" aria-hidden="true" href="#9-预训练数据">#</a></h2>
+<ul>
+<li>
+<p>The Pile: An 800GB Dataset of Diverse Text for Language Modeling
+<a href="https://arxiv.org/abs/2101.00027">https://arxiv.org/abs/2101.00027</a></p>
+</li>
+<li>
+<p>ChatGPT 数据集之谜
+<a href="https://mp.weixin.qq.com/s?__biz=MzA5ODEzMjIyMA==&amp;mid=2247700799&amp;idx=2&amp;sn=1e3ed03d7c7c637775bec28253c2c586&amp;chksm=909bd8aca7ec51ba28041f7c1e694a3df2ac78038fca80dc8573d192c849f51099187b4cf48a&amp;mpshare=1&amp;scene=1&amp;srcid=0215lXttfVBw7Qh9TAlrJcJK&amp;sharer_sharetime=1676511276776&amp;sharer_shareid=95e17c8e615358fda71a20aabf4db300&amp;exportkey=n_ChQIAhIQUHFcRtmxCAxN%2Funs10MVjBKZAgIE97dBBAEAAAAAAGcQKvAIhioAAAAOpnltbLcz9gKNyK89dVj0StQ9%2F4SqWBIe%2BAbTr%2BUGK88lpPyfaOiy48kOlyMcaHXQQDGFqB8alNeXQ6oLO40GtQw3Ivthm%2FI7gGR1eGXrjYzqX4%2FqwnHXnjPIc%2BfRA0F%2BMSIPltfTCqDClD2cFdFVKMSiVib0dqUL6Ltr3nPhsCieYWiWilVt94vnPXT74SxsA2tDC%2BNfYKwS17qMvE1BZgK9p6iGC1gA2eX00r44nPE8niedVqZTgXGu1CixHp30MoNcQB5XkKGYZW2o6tTwVa2fMa8%2BqYBiGYBOD2XltPQtssw6RLupkN%2Fu53q3lnojbIdTimg5%2FZThQcPuzCVmrj21&amp;acctmode=0&amp;pass_ticket=O8m86P11g6%2BGBbI2SuOjF5sm8UiWk7FN3bJyc7bze6djd8ECLDlPhbPfxZxo6IPRNkmd9JXZg41DKU9aYmU4cw%3D%3D&amp;wx_header=0#rd">地址</a></p>
+</li>
+</ul>
+<h2 id="10-训练成本分析">10 训练成本分析<a hidden class="anchor" aria-hidden="true" href="#10-训练成本分析">#</a></h2>
+<ul>
+<li>
+<p>样例1 冻结部分参数预训练big model
+<a href="https://huggingface.co/IDEA-CCNL/Randeng-T5-784M">https://huggingface.co/IDEA-CCNL/Randeng-T5-784M</a></p>
+<p>我们基于mT5-large，训练了它的中文版。为了加速训练，我们仅使用T5分词器(sentence piece)中的中英文对应的词表，并且使用了语料库自适应预训练(Corpus-Adaptive Pre-Training, CAPT)技术在悟道语料库(180G版本)继续预训练。预训练目标为破坏span。具体地，我们在预训练阶段中使用了<a href="https://github.com/IDEA-CCNL/Fengshenbang-LM/tree/main/fengshen">封神框架</a>大概花费了16张A100约96小时。</p>
+<p>使用评估网站：https://www.autodl.com/home</p>
+<p>上述训练花费代价(采用16张<code>A100</code>训练<code>180G</code>语料-仅仅训练了词表的embedding，详见<a href="https://arxiv.org/pdf/2209.02970.pdf">论文</a>)：7.98元/h x 16 x 96=12257.28元</p>
+</li>
+</ul>
+<p><img loading="lazy" src="image-20230210140512616.png" alt="image-20230210140512616"  />
+</p>
+<ul>
+<li>样例2 全部参数预训练 big model
+<a href="https://www.zhiu.cn/156272.html">https://www.zhiu.cn/156272.html</a></li>
+</ul>
+<h2 id="11-大规模语言模型训练框架">11 大规模语言模型训练框架<a hidden class="anchor" aria-hidden="true" href="#11-大规模语言模型训练框架">#</a></h2>
+<ul>
+<li>DeepSpeed
+<a href="https://www.deepspeed.ai/">https://www.deepspeed.ai/</a></li>
+<li>ColossalAI
+<a href="https://github.com/hpcaitech/ColossalAI">https://github.com/hpcaitech/ColossalAI</a></li>
+</ul>
+<h2 id="12-针对chatgpt的训练过程复现">12 针对chatGPT的训练过程复现<a hidden class="anchor" aria-hidden="true" href="#12-针对chatgpt的训练过程复现">#</a></h2>
+<ul>
+<li>
+<p><strong>样例</strong></p>
+</li>
+<li>
+<p>colossal-ai-chatgpt
+Open source solution replicates ChatGPT training process! Ready to go with only 1.6GB GPU memory and gives you 7.73 times faster training!</p>
+<p><a href="https://www.hpc-ai.tech/blog/colossal-ai-chatgpt">https://www.hpc-ai.tech/blog/colossal-ai-chatgpt</a></p>
+</li>
+<li>
+<p>基于情感分类的类chatGPT训练</p>
+<p>完整源码在这里：</p>
+<p><em><a href="https://github.com/HarderThenHarder/transformers_tasks/tree/main/RLHF">https://github.com/HarderThenHarder/transformers_tasks/tree/main/RLHF</a></em></p>
+</li>
+<li>
+<p><strong>重要思路</strong></p>
+</li>
+<li>
+<p>完全从零实现chatGPT-<a href="https://karpathy.ai/">Andrej Karpathy</a>
+B站搬运
+<a href="https://space.bilibili.com/3129054/channel/collectiondetail?sid=874339">https://space.bilibili.com/3129054/channel/collectiondetail?sid=874339</a>
+课程主页:https://github.com/karpathy/nn-zero-to-hero
+重点项目::https://github.com/karpathy/nanoGPT</p>
+</li>
+<li>
+<p>大型语言模型的能力分析与应用　邱锡鹏复旦大学
+<a href="https://www.bilibili.com/video/BV1Tx4y1w78p">https://www.bilibili.com/video/BV1Tx4y1w78p</a></p>
+</li>
+</ul>
+<h2 id="13-强化学习方法介绍">13 强化学习方法介绍<a hidden class="anchor" aria-hidden="true" href="#13-强化学习方法介绍">#</a></h2>
+<ul>
+<li>Illustrating Reinforcement Learning from Human Feedback (RLHF)
+<a href="https://huggingface.co/blog/rlhf">https://huggingface.co/blog/rlhf</a></li>
+</ul>
+<h2 id="14-chatgpt技术思考">14 chatGPT技术思考<a hidden class="anchor" aria-hidden="true" href="#14-chatgpt技术思考">#</a></h2>
+<ul>
+<li>
+<p>ChatGPT 背后的“功臣”——RLHF 技术详解
+<a href="https://mp.weixin.qq.com/s?__biz=Mzk0MDQyNTY4Mw==&amp;mid=2247484347&amp;idx=1&amp;sn=216b180e33cd4a422e3027c8176893cd&amp;scene=21#wechat_redirect">地址</a>
+解读 ChatGPT 背后的技术重点：RLHF、IFT、CoT、红蓝对抗
+<a href="https://mp.weixin.qq.com/s?__biz=MjM5ODExNDA2MA==&amp;mid=2449950138&amp;idx=1&amp;sn=ed1b43743bc6cdf3ecf3fe05b1afc565&amp;chksm=b13c43d9864bcacf262ed0c2540d1dab3aef587ea7c56c35528356cc94293ce8bb3573b3f208&amp;mpshare=1&amp;scene=1&amp;srcid=0216TtZLE0MPIQrn3zzOzP3Z&amp;sharer_sharetime=1676505971091&amp;sharer_shareid=95e17c8e615358fda71a20aabf4db300&amp;exportkey=n_ChQIAhIQomH%2FyfMIdC6dMaAfFjvD6RKZAgIE97dBBAEAAAAAADBcNANJlJoAAAAOpnltbLcz9gKNyK89dVj04Fi%2BN243YM0QctmSL7Y2jJtyRzp3uvXzOjoncQL6jFD88yr6xUbLgaVJRWWwtqzJnN%2BUQaydoDDYRRNPtBO1QGSsJzHCOCh6VwoHinCvnfMEQsXpcGCafI%2F8kR8sNBrBHp8o4oiwPm2MkwvMG1uNajwoXpWGLzVRpEdYDYZnHwFH9M4UDHjiTFb7FrqIihc3U0A6%2F8JWuJhupGEB98p%2F%2BXyJnx8l6y0IL9y%2FdJKK8lJdOvwlA3ib1rF%2B66U2X4Ru9Z2ZRj610ZFgQygWtjXq1Tk%2B3xxgNmtcmfDeOOotLl0yNSeihsno9jc%2FQad8fTnv5JbO&amp;acctmode=0&amp;pass_ticket=O8m86P11g6%2BGBbI2SuOjF5sm8UiWk7FN3bJyc7bze6dR3kWW3iO77GbHWnJDqirQ35EqKPUAsIswSvz5VVpPfA%3D%3D&amp;wx_header=0#rd">地址</a></p>
+</li>
+<li>
+<p><strong>(重要)What Makes a Dialog Agent Useful?</strong>
+<a href="https://huggingface.co/blog/dialog-agents">https://huggingface.co/blog/dialog-agents</a></p>
+</li>
+<li>
+<p>红蓝对抗 (red-teaming)
+<a href="https://arxiv.org/abs/2209.07858">https://arxiv.org/abs/2209.07858</a></p>
+</li>
+<li>
+<p>张栋：ChatGPT 制胜公式
+<a href="https://hub.baai.ac.cn/view/24166">https://hub.baai.ac.cn/view/24166</a></p>
+</li>
+<li>
+<p><strong>(重要)How does GPT Obtain its Ability? Tracing Emergent Abilities of Language Models to their Sources</strong></p>
+<p><a href="https://yaofu.notion.site/How-does-GPT-Obtain-its-Ability-Tracing-Emergent-Abilities-of-Language-Models-to-their-Sources-b9a57ac0fcf74f30a1ab9e3e36fa1dc1">https://yaofu.notion.site/How-does-GPT-Obtain-its-Ability-Tracing-Emergent-Abilities-of-Language-Models-to-their-Sources-b9a57ac0fcf74f30a1ab9e3e36fa1dc1</a></p>
+</li>
+<li>
+<p><strong>(重要)Chain of Thought Prompting Elicits Reasoning in Large Language Models</strong></p>
+<p><a href="https://arxiv.org/pdf/2201.11903v1.pdf">https://arxiv.org/pdf/2201.11903v1.pdf</a></p>
+</li>
+<li>
+<p>深入理解语言模型的突现能力</p>
+<p><a href="https://yaofu.notion.site/514f4e63918749398a1a8a4c660e0d5b">https://yaofu.notion.site/514f4e63918749398a1a8a4c660e0d5b</a></p>
+</li>
+</ul>
+<h2 id="15-chatgpt影响">15 chatGPT影响<a hidden class="anchor" aria-hidden="true" href="#15-chatgpt影响">#</a></h2>
+<ul>
+<li>
+<p>联想CTO芮勇：AI大模型为智能化变革带来的机遇和挑战</p>
+<p><a href="https://hub.baai.ac.cn/view/24171">https://hub.baai.ac.cn/view/24171</a></p>
+</li>
+<li>
+<p>Reid Hoffman｜相信自己，其实你比想象中更有准备</p>
+</li>
+<li>
+<p>中金 | AI十年展望（五）：从ChatGPT到通用智能，新长征上的新变化
+<a href="https://mp.weixin.qq.com/s?__biz=MzI3MDMzMjg0MA==&amp;mid=2247614435&amp;idx=4&amp;sn=f8fa5c51c13fd56eaa976901d1f182e2&amp;chksm=ead1d924dda65032d9c518fece7a973236ba2c7011e35e7c214c9f844a7c09ecc5d685210c43&amp;mpshare=1&amp;scene=1&amp;srcid=0203K8jtHijzZr6wvULIWERm&amp;sharer_sharetime=1675402722773&amp;sharer_shareid=18016bb3ee6115f00a7e5625b81a673e&amp;exportkey=n_ChQIAhIQb3FDsA9uidul3FVjuQWEAxKZAgIE97dBBAEAAAAAAGuIBYfEDTIAAAAOpnltbLcz9gKNyK89dVj0AYsV55gisAOmbR5so5YDwwWZC4p8JH5WABUPyxt7qU2jxpLh7QbuG0BfZT7kMtin0hWmFahxn%2BTXqMtXLp5vK1Xw0wp%2FlzYKjFcZQ91fPmq5gvHT8K%2BgVUmR6wrraAL0UtfxAG5fTCWzTG7%2B7hHnySmkdoa8JivIIsaIyA9naSG9pU%2FvL14d7cKszMDuLEl%2BUmKWcxOyb4nTx8OaGEkPVVgceQQcb0FfXP2eBtGAKBwERr9wh3aRyD8jSnAkZ4841zt8xXjFNPGov1mXrNwR7CYlSmNhNDKV6jRM1VVZCYcbXDOHWm6bU%2Bf3M584Ph4Z82GP&amp;acctmode=0&amp;pass_ticket=6H5e0SHvuq7CJmsgWvzRLZHdowuOKCxpdjNZVSUjSqlMUfveOL24taTc04b5gigr3zEDtmKj7UgCZlvF%2BIF6BA%3D%3D&amp;wx_header=0#rd">地址</a></p>
+</li>
+<li>
+<p>AIGC：ChatGPT(一个里程碑式的对话聊天机器人)的简介(意义/功能/核心技术等)、使用方法(七类任务)、案例应用(提问基础性/事实性/逻辑性/创造性/开放性的问题以及编程相关)之详细攻略
+<a href="https://yunyaniu.blog.csdn.net/article/details/128229941">地址</a></p>
+</li>
+<li>
+<p>人工智能行业ChatGPT专题研究：开启AI新纪元.pdf
+<a href="https://www.vzkoo.com/document/2023020328d4913255f87e4c853de0b8.html">https://www.vzkoo.com/document/2023020328d4913255f87e4c853de0b8.html</a></p>
+<p><a href="https://hub.baai.ac.cn/view/24173">https://hub.baai.ac.cn/view/24173</a></p>
+</li>
+</ul>
+<h2 id="16-attention相关">16 Attention相关<a hidden class="anchor" aria-hidden="true" href="#16-attention相关">#</a></h2>
+<ul>
+<li>
+<p>测试两种新 Attention 机制：gMLP 和 AFT（结论：AFT 效果好）
+<a href="https://zhuanlan.zhihu.com/p/395005917?utm_id=0">https://zhuanlan.zhihu.com/p/395005917?utm_id=0</a></p>
+</li>
+<li>
+<p>RWKV is inspired by Apple&rsquo;s AFT (<a href="https://arxiv.org/abs/2105.14103)">https://arxiv.org/abs/2105.14103)</a>.</p>
+<p>Moreover it&rsquo;s using a number of my tricks, such as:</p>
+<ul>
+<li>SmallInitEmb: <a href="https://github.com/BlinkDL/SmallInitEmb">https://github.com/BlinkDL/SmallInitEmb</a> (applicable to all transformers) which helps the embedding quality, and stabilizes Post-LN (which is what I am using).</li>
+<li>Token-shift: <a href="https://github.com/BlinkDL/RWKV-LM#token-shift-time-shift-mixing">https://github.com/BlinkDL/RWKV-LM#token-shift-time-shift-mixing</a> (applicable to all transformers), especially helpful for char-level models.</li>
+<li>Head-QK: <a href="https://github.com/BlinkDL/RWKV-LM#the-head-qk-trick-learning-to-copy-and-avoid-tokens">https://github.com/BlinkDL/RWKV-LM#the-head-qk-trick-learning-to-copy-and-avoid-tokens</a> (applicable to all transformers). Note: it&rsquo;s helpful, but I disabled it in the Pile model to keep it 100% RNN.</li>
+<li>Extra R-gate in the FFN (applicable to all transformers). I am also using reluSquared from Primer.</li>
+<li>Better initilization: I init most of the matrices to ZERO (see RWKV_Init in <a href="https://github.com/BlinkDL/RWKV-LM/blob/main/RWKV-v2-RNN/src/model.py)">https://github.com/BlinkDL/RWKV-LM/blob/main/RWKV-v2-RNN/src/model.py)</a>.</li>
+<li>You can transfer some parameters from a small model to a large model (note: I sort &amp; smooth them too), for faster and better convergence (see <a href="https://www.reddit.com/r/MachineLearning/comments/umq908/r_rwkvv2rnn_a_parallelizable_rnn_with/)">https://www.reddit.com/r/MachineLearning/comments/umq908/r_rwkvv2rnn_a_parallelizable_rnn_with/)</a>.</li>
+<li>My CUDA kernel: <a href="https://github.com/BlinkDL/RWKV-CUDA">https://github.com/BlinkDL/RWKV-CUDA</a> to speedup training.</li>
+</ul>
+</li>
+</ul>
+<h2 id="17-lmaas思维链">17 LMaaS思维链<a hidden class="anchor" aria-hidden="true" href="#17-lmaas思维链">#</a></h2>
+<ul>
+<li><strong>论文概述或集合</strong></li>
+<li><strong>Towards Reasoning in Large Language Models: A Survey.</strong></li>
+<li><a href="https://arxiv.org/abs/2212.10403">https://arxiv.org/abs/2212.10403</a></li>
+<li>A trend starts from &ldquo;Chain of Thought Prompting Elicits Reasoning in Large Language Models&rdquo;.</li>
+<li><a href="https://github.com/Timothyxxx/Chain-of-ThoughtsPapers">https://github.com/Timothyxxx/Chain-of-ThoughtsPapers</a></li>
+<li><strong>代表论文</strong></li>
+<li>思维链提示 (Wei 等, &lsquo;22):
+<a href="https://arxiv.org/abs/2201.11903">https://arxiv.org/abs/2201.11903</a></li>
+<li>Let’s think step by step:
+<a href="https://arxiv.org/abs/2205.11916">https://arxiv.org/abs/2205.11916</a></li>
+<li>CoT 图解示例 (Chung 等, &lsquo;22):
+<a href="https://arxiv.org/abs/2210.11416">https://arxiv.org/abs/2210.11416</a></li>
+<li>CoT 微调也显示出对无害性非常有效 (Bai 等, &lsquo;22):
+<a href="https://www.anthropic.com/constitutional.pdf">https://www.anthropic.com/constitutional.pdf</a></li>
+<li><strong>Large Language Models Are Reasoning Teachers.</strong></li>
+<li><a href="https://arxiv.org/abs/2212.10071">https://arxiv.org/abs/2212.10071</a></li>
+<li><strong>开放模型及代码</strong></li>
+<li>Automatic Chain of Thought Prompting in Large Language Models
+<a href="https://github.com/amazon-science/auto-cot">https://github.com/amazon-science/auto-cot</a></li>
+</ul>
+<h2 id="18--lmaas安全性">18  LMaaS安全性<a hidden class="anchor" aria-hidden="true" href="#18--lmaas安全性">#</a></h2>
+<ul>
+<li>Unnatural Instructions (Honovich 等, &lsquo;22):
+<a href="https://arxiv.org/abs/2212.09689">https://arxiv.org/abs/2212.09689</a></li>
+<li>Super-natural instructions (Wang 等, &lsquo;22):
+<a href="https://arxiv.org/abs/2204.07705">https://arxiv.org/abs/2204.07705</a></li>
+<li>Self-Instruct (Wang 等, &lsquo;22):
+<a href="https://arxiv.org/abs/2212.10560">https://arxiv.org/abs/2212.10560</a></li>
+<li>T0 (Sanh 等, &lsquo;22):
+<a href="https://arxiv.org/abs/2110.08207">https://arxiv.org/abs/2110.08207</a></li>
+<li>Natural instructions 数据集 (Mishra 等, &lsquo;22):
+<a href="https://arxiv.org/abs/2104.08773">https://arxiv.org/abs/2104.08773</a></li>
+<li>FLAN LM (Wei 等, &lsquo;22):
+<a href="https://arxiv.org/abs/2109.01652">https://arxiv.org/abs/2109.01652</a></li>
+<li>OPT-IML (Iyer 等, &lsquo;22):
+<a href="https://arxiv.org/abs/2212.12017">https://arxiv.org/abs/2212.12017</a></li>
+</ul>
+<h2 id="19-对话机器人产品">19 对话机器人产品<a hidden class="anchor" aria-hidden="true" href="#19-对话机器人产品">#</a></h2>
+<ul>
+<li>Meta 的 BlenderBot:
+<a href="https://arxiv.org/abs/2208.03188">https://arxiv.org/abs/2208.03188</a></li>
+<li>Google 的 LaMDA:
+<a href="https://arxiv.org/abs/2201.08239">https://arxiv.org/abs/2201.08239</a></li>
+<li>DeepMind 的 Sparrow:
+<a href="https://arxiv.org/abs/2209.14375">https://arxiv.org/abs/2209.14375</a></li>
+<li>Anthropic 的 Assistant:
+<a href="https://arxiv.org/abs/2204.05862">https://arxiv.org/abs/2204.05862</a></li>
+</ul>
+<h2 id="20-对话数据集">20 对话数据集<a hidden class="anchor" aria-hidden="true" href="#20-对话数据集">#</a></h2>
+<ul>
+<li>三个数据集：</li>
+</ul>
+<p>（１）闲聊　</p>
+<p>（２）基于文档的问题回复　Dureader
+<strong>Dureader*checklist*阅读理解细粒度评估数据集</strong>&ndash;不可能的直接给文档</p>
+<p>​	<strong>DuReader*robust*阅读理解鲁棒性数据集</strong></p>
+<p>（３）多轮会话语料</p>
+<p>​	<strong>DuLeMon中文长时记忆对话数据集</strong></p>
+<p>​	<strong>Diamante中文开放域闲聊数据集</strong></p>
+<p>​	<strong>DuSinc服务信息增强对话数据集</strong></p>
+<p>​	CrossWOZ</p>
+<p>​	https://github.com/thu-coai/<em>CrossWOZ</em></p>
+<h2 id="21-其他人总结chatgpt">21 其他人总结chatGPT<a hidden class="anchor" aria-hidden="true" href="#21-其他人总结chatgpt">#</a></h2>
+<ul>
+<li>关于ChatGPT的预训练和调优方法的必读论文、相关博客和API工具。
+<a href="https://chatgpt.pro/">https://chatgpt.pro/</a>
+<a href="https://github.com/shizhediao/ChatGPTPapers">https://github.com/shizhediao/ChatGPTPapers</a></li>
+<li><strong>已声明类chatGPT内测阶段的机构或公司</strong>
+<ul>
+<li>京东</li>
+<li>百度</li>
+<li>阿里</li>
+<li>腾讯</li>
+<li>chatYuan</li>
+<li>复旦</li>
+</ul>
+</li>
+</ul>
+<h2 id="22-多技能对话">22 多技能对话<a hidden class="anchor" aria-hidden="true" href="#22-多技能对话">#</a></h2>
+<ul>
+<li>
+<p><strong>任务型对话</strong></p>
+</li>
+<li>
+<p>A Large-Scale Benchmark for Chinese Goal-oriented Dialog Evaluation</p>
+</li>
+<li>
+<p>Estimating Soft Labels for Out-of-Domain Intent Detection</p>
+</li>
+<li>
+<p><strong>表格型对话</strong></p>
+</li>
+<li>
+<p>STAR: SQL Guided Pre-Training for Context-dependent Text-to-SQL Parsing</p>
+</li>
+<li>
+<p>Towards Generalizable and Robust Text-to-SQL Parsing</p>
+</li>
+<li>
+<p><strong>文档型对话</strong></p>
+</li>
+<li>
+<p>Towards Generalized Open Information Extraction</p>
+</li>
+<li>
+<p>Doc2Bot: Accessing Heterogeneous Documents via Conversational Bots</p>
+</li>
+<li>
+<p><strong>多模态对话</strong></p>
+</li>
+<li>
+<p><strong>对话系统的终身学习</strong></p>
+</li>
+<li>
+<p>Prompt Conditioned VAE: Enhancing Generative Replay for Lifelong Learning in Task-Oriented Dialogue</p>
+</li>
+<li>
+<p>Semi-Supervised Lifelong Language Learning</p>
+</li>
+</ul>
+<h2 id="23-知识型对话">23 知识型对话<a hidden class="anchor" aria-hidden="true" href="#23-知识型对话">#</a></h2>
+<p>动态知识对话</p>
+<ul>
+<li>SINC: Service Information Augmented Open-Domain Conversation
+又名:Link the World: Improving Open-domain Conversation with Dynamic Spatiotemporal-aware Knowledge
+<a href="https://arxiv.org/pdf/2206.14000v2.pdf">https://arxiv.org/pdf/2206.14000v2.pdf</a></li>
+</ul>
+<p>显式目标对话</p>
+<ul>
+<li>DuConv: Proactive Human-Machine Conversation with Explicit Conversation Goals
+<a href="https://arxiv.org/pdf/1906.05572v2.pdf">https://arxiv.org/pdf/1906.05572v2.pdf</a></li>
+</ul>
+<p>知识对话</p>
+<ul>
+<li>
+<p>KdConv: A Chinese Multi-domain Dialogue Dataset Towards Multi-turn Knowledge-driven Conversation
+<a href="https://arxiv.org/pdf/2004.04100v1.pdf">https://arxiv.org/pdf/2004.04100v1.pdf</a></p>
+</li>
+<li>
+<p>KPT: Keyword-guided Pre-training for Grounded Dialog Generation</p>
+</li>
+</ul>
+<h2 id="24-对话表示学习">24 对话表示学习<a hidden class="anchor" aria-hidden="true" href="#24-对话表示学习">#</a></h2>
+<ul>
+<li>
+<p><strong>dial2vec: Self-Guided Contrastive Learning of Unsupervised Dialogue Embeddings</strong></p>
+<p><a href="https://arxiv.org/abs/2210.15332v1">https://arxiv.org/abs/2210.15332v1</a></p>
+<p><a href="https://github.com/AlibabaResearch/DAMO-ConvAI/tree/main/dial2vec">https://github.com/AlibabaResearch/DAMO-ConvAI/tree/main/dial2vec</a></p>
+</li>
+</ul>
+<h2 id="25-国内大厂对话系统实验室">25 国内大厂对话系统实验室<a hidden class="anchor" aria-hidden="true" href="#25-国内大厂对话系统实验室">#</a></h2>
+<h3 id="达摩院的space">达摩院的SPACE<a hidden class="anchor" aria-hidden="true" href="#达摩院的space">#</a></h3>
+<ul>
+<li>SPACE-1: <a href="https://arxiv.org/abs/2111.14592">https://arxiv.org/abs/2111.14592</a></li>
+<li>SPACE-2: <a href="https://arxiv.org/abs/2209.06638">https://arxiv.org/abs/2209.06638</a></li>
+<li>SPACE-3: <a href="https://arxiv.org/abs/2209.06664">https://arxiv.org/abs/2209.06664</a></li>
+<li>相关代码：https://github.com/AlibabaResearch/DAMO-ConvAI</li>
+</ul>
+<h3 id="百度的knover">百度的Knover<a hidden class="anchor" aria-hidden="true" href="#百度的knover">#</a></h3>
+<ul>
+<li>
+<p>PLATO-1</p>
+</li>
+<li>
+<p>PLATO-2</p>
+</li>
+<li>
+<p>PLATO-XL</p>
+</li>
+<li>
+<p>PLATO-KAG(<em>PLATO</em>-K)</p>
+<ul>
+<li>March 2022: We are opening <a href="https://github.com/PaddlePaddle/Knover/blob/ab547f0ba03c9142183d97c2ee6ed7a1c3750125/projects/PLATO-KAG/README.md">PLATO-KAG</a>, an unsupervised learning approach for end-to-end knowledge-grounded conversation modeling.</li>
+<li>February 2022: We are opening our TOD-DA dataset, models and code in <a href="https://github.com/PaddlePaddle/Knover/blob/ab547f0ba03c9142183d97c2ee6ed7a1c3750125/projects/DSTC10-Track2/README.md">DSTC10-Track2</a>.</li>
+<li>December 2021: We are opening the dialogue generation model of <a href="https://github.com/PaddlePaddle/Knover/blob/ab547f0ba03c9142183d97c2ee6ed7a1c3750125/projects/PLATO-XL/README.md">PLATO-XL</a>, with up to 11 billion parameters.</li>
+<li>October 2021: We are opening <a href="https://github.com/PaddlePaddle/Knover/blob/ab547f0ba03c9142183d97c2ee6ed7a1c3750125/projects/AG-DST/README.md">AG-DST</a>, an amendable generation for dialogue state tracking.</li>
+<li>February 2021: We are opening our implementation (Team 19) in <a href="https://github.com/PaddlePaddle/Knover/blob/ab547f0ba03c9142183d97c2ee6ed7a1c3750125/projects/DSTC9-Track1/README.md">DSTC9-Track1</a>.</li>
+<li>July 2020: We are opening <a href="https://github.com/PaddlePaddle/Knover/blob/ab547f0ba03c9142183d97c2ee6ed7a1c3750125/projects/PLATO-2/README.md">PLATO-2</a>, a large-scale generative model with latent space for open-domain dialogue systems.</li>
+</ul>
+</li>
+</ul>
+<p>[1] <a href="arxiv.org/abs/2112.12441">TOD-DA: Towards Boosting the Robustness of Task-oriented Dialogue Modeling on Spoken Conversations</a></p>
+<p>[2] <a href="arxiv.org/abs/2102.02096">Learning to Select External Knowledge with Multi-Scale Negative Sampling</a></p>
+<p>[3] <a href="aclanthology.org/2021.nlp4convai-1.14">PLATO-KAG: Unsupervised Knowledge-Grounded Conversation via Joint Modeling</a></p>
+<p>[4] <a href="arxiv.org/abs/2109.09519">PLATO-XL: Exploring the Large-scale Pre-training of Dialogue Generation</a></p>
+<p>[5] <a href="www.aclweb.org/anthology/2020.acl-main.9">PLATO: Pre-trained Dialogue Generation Model with Discrete Latent Variable</a></p>
+<h3 id="腾讯ai-lab-dialogue-research">腾讯AI lab Dialogue Research<a hidden class="anchor" aria-hidden="true" href="#腾讯ai-lab-dialogue-research">#</a></h3>
+<p><a href="https://ai.tencent.com/ailab/nlp/dialogue/">https://ai.tencent.com/ailab/nlp/dialogue/</a></p>
+<p>Retrieval-guided Dialogue Response Generation via a Matching-to-Generation Framework</p>
+<p><a href="https://aclanthology.org/D19-1195.pdf">https://aclanthology.org/D19-1195.pdf</a></p>
+<p><a href="https://github.com/jcyk/seqgen">https://github.com/jcyk/seqgen</a></p>
+<h2 id="26-工程化transformer加速">26 (工程化)Transformer加速<a hidden class="anchor" aria-hidden="true" href="#26-工程化transformer加速">#</a></h2>
+<ul>
+<li>
+<p>Efficient Transformers: A Survey</p>
+<p><a href="http://export.arxiv.org/pdf/2009.06732v3.pdf">http://export.arxiv.org/pdf/2009.06732v3.pdf</a></p>
+</li>
+<li>
+<p>Large Transformer Model Inference Optimization
+<a href="https://lilianweng.github.io/posts/2023-01-10-inference-optimization/">https://lilianweng.github.io/posts/2023-01-10-inference-optimization/</a></p>
+</li>
+<li>
+<p>The Transformer Family Version 2.0
+<a href="https://lilianweng.github.io/posts/2023-01-27-the-transformer-family-v2/">https://lilianweng.github.io/posts/2023-01-27-the-transformer-family-v2/</a></p>
+</li>
+<li>
+<p><strong>(留存)ChatGPT is not all you need. A State of the Art Review of large Generative AI models</strong></p>
+<p>大规模生成模型</p>
+</li>
+<li>
+<p>(留存)COLD Decoding: Energy-based Constrained Text Generation with Langevin Dynamics</p>
+<p>约束来控制生成文本的语义或样式</p>
+</li>
+<li>
+<p>(留存) Symmetry Teleportation for Accelerated Optimization
+提出了一种新的基于参数空间对称性的优化方法（symmetry teleportation），这是在在参数空间上保持损失不变的一组动作，它允许参数移动很大的距离，以提高后续步骤的收敛速度」。本文算法利用了高阶景观几何，但在大多数步骤中只使用梯度信息，从而避免了二阶方法的计算成本。</p>
+</li>
+<li>
+<p>(留存)Deep Bidirectional Language-Knowledge Graph Pretraining
+知识图谱+语言模型的预训练
+<a href="https://export.arxiv.org/pdf/2210.09338v2.pdf">https://export.arxiv.org/pdf/2210.09338v2.pdf</a></p>
+</li>
+<li>
+<p>(留存) Are Pre-trained Convolutions Better than Pre-trained Transformers?
+不要将预训练的进步与架构的进步混为一谈</p>
+</li>
+<li>
+<p>Efficient Deep Learning: A Survey on Making Deep Learning Models Smaller, Faster, and Better</p>
+</li>
+<li>
+<p><strong>(重要-精读) FastSeq: Make Sequence Generation Faster</strong>
+The proposed optimization techniques include an <strong>attention cache optimization</strong>, an efficient algorithm for** detecting repeated n-grams**, and an **asynchronous
+generation pipeline **with parallel I/O.
+<a href="https://github.com/microsoft/fastseq">https://github.com/microsoft/fastseq</a></p>
+</li>
+<li>
+<p>(留存) Query-driven Segment Selection for Ranking Long Documents</p>
+</li>
+<li>
+<p><strong>(重要） Understanding and Overcoming the Challenges of Efficient Transformer Quantization.</strong>
+<a href="https://github.com/qualcomm-ai-research/transformer-quantization">https://github.com/qualcomm-ai-research/transformer-quantization</a>.</p>
+</li>
+<li>
+<p>Finetuning Pretrained Transformers into RNNs</p>
+</li>
+<li>
+<p>A Primer on Pretrained Multilingual Language Models</p>
+</li>
+<li>
+<p>(留存) AMMUS : A Survey of Transformer-based Pretrained Models in Natural Language Processing</p>
+</li>
+<li>
+<p>EL-Attention: Memory Efficient Lossless Attention for Generation</p>
+<p><strong>自回归模型转非自回归</strong></p>
+</li>
+<li>
+<p>SlotRefine: A Fast Non-Autoregressive Model for Joint Intent Detection and Slot Filling</p>
+</li>
+<li>
+<p>Incorporating history and future into non-autoregressive machine translation</p>
+</li>
+<li>
+<p>（留存）Non-Autoregressive Neural Machine Translation</p>
+</li>
+<li>
+<p>An Effective Non-Autoregressive Model for Spoken Language Understanding</p>
+</li>
+<li>
+<p>（重要）A Study of Non-autoregressive Model for Sequence Generation</p>
+</li>
+<li>
+<p>A Survey on Non-Autoregressive Generation for Neural Machine Translation and Beyond</p>
+</li>
+<li>
+<p>(重要)Directed Acyclic Transformer for Non-Autoregressive Machine Translation</p>
+<p><a href="https://arxiv.org/abs/2205.07459">https://arxiv.org/abs/2205.07459</a></p>
+</li>
+<li>
+<p>latent-GLAT: Glancing at Latent Variables for Parallel Text Generation</p>
+<p><a href="https://github.com/baoy-nlp/latent-glat">https://github.com/baoy-nlp/latent-glat</a></p>
+</li>
+<li>
+<p><a href="https://lilianweng.github.io/posts/2023-01-10-inference-optimization/">https://lilianweng.github.io/posts/2023-01-10-inference-optimization/</a></p>
+</li>
+</ul>
+<h2 id="27-低显存运行">27 低显存运行<a hidden class="anchor" aria-hidden="true" href="#27-低显存运行">#</a></h2>
+<ul>
+<li>ChatRWKV v2 (wip) can split the model to gpu+cpu or gpu+gpu:
+<a href="https://github.com/BlinkDL/ChatRWKV/tree/main/v2">https://github.com/BlinkDL/ChatRWKV/tree/main/v2</a>
+(Stream mode soon)
+这个可以把模型分到双卡，或者一部分GPU一部分CPU（适合刚好放不下的情况）
+稍后再加 STREAM 模式，在小显存GPU跑大模型（加载几层模型，跑几层，再加载几层，跑几层）</li>
+</ul>
+<h2 id="28-问题重写">28 问题重写<a hidden class="anchor" aria-hidden="true" href="#28-问题重写">#</a></h2>
+<ul>
+<li>
+<p><strong>（重要) Question Rewriting for Conversational Question Answering (2021年)</strong></p>
+<p><a href="https://dl.acm.org/doi/pdf/10.1145/3437963.3441748">https://dl.acm.org/doi/pdf/10.1145/3437963.3441748</a></p>
+<p>对话式问题回答的问题重写</p>
+</li>
+<li>
+<p>Reinforced Question Rewriting for Conversational Question Answering</p>
+</li>
+<li>
+<p>Open-Domain Question Answering Goes Conversational via Question Rewriting</p>
+<p><a href="https://github.com/akaysh/DenseQrecc">https://github.com/akaysh/DenseQrecc</a></p>
+</li>
+<li>
+<p><a href="https://lrec2022.lrec-conf.org/en/">https://lrec2022.lrec-conf.org/en/</a>
+<a href="https://github.com/Orange-OpenSource/COQAR">https://github.com/Orange-OpenSource/COQAR</a></p>
+</li>
+<li>
+<p><strong>(重要)Improving Multi-turn Dialogue Modelling with Utterance ReWriter</strong></p>
+<p><a href="https://github.com/liu-nlper/dialogue-utterance-rewriter.git">https://github.com/liu-nlper/dialogue-utterance-rewriter.git</a></p>
+</li>
+<li>
+<p><strong>(重要-精读)Improving Open-Domain Dialogue Systems via Multi-Turn Incomplete Utterance Restoration (Pan et al., 2019)</strong></p>
+<p><strong>Restoration-200K datasets</strong></p>
+<p><a href="https://ai.tencent.com/ailab/nlp/dialogue/datasets/Restoration-200K.zip">https://ai.tencent.com/ailab/nlp/dialogue/datasets/Restoration-200K.zip</a></p>
+</li>
+</ul>
+<!-- raw HTML omitted -->
+<ul>
+<li>
+<p>**(重要) Robust Dialogue Utterance Rewriting as Sequence Tagging **</p>
+<p>采用标注&ndash;速度加快</p>
+</li>
+<li>
+<p>Utterance Rewriting with Contrastive Learning in Multi-turn Dialogue</p>
+</li>
+<li>
+<p><strong>(重要)SARG: A Novel Semi Autoregressive Generator for <em>Multi</em>-<em>turn</em> <em>Incomplete</em> <em>Utterance</em> <em>Restoration</em>.</strong></p>
+<p><a href="https://github.com/NetEase-GameAI/SARG">https://github.com/NetEase-GameAI/SARG</a></p>
+<p><strong>NAG即Non-Autoregressive Model</strong></p>
+</li>
+<li>
+<p><strong>其他</strong></p>
+</li>
+<li>
+<p>文献综述之语句重写, 看这一篇就够了!</p>
+<p>​	https://zhuanlan.zhihu.com/p/405209386</p>
+</li>
+</ul>
+<h2 id="29-对话系统survey">29 对话系统survey<a hidden class="anchor" aria-hidden="true" href="#29-对话系统survey">#</a></h2>
+<ul>
+<li>
+<p>The AI Doctor Is In: A <em>Survey</em> of <em>Task</em>-<em>Oriented</em> Dialogue Systems for Healthcare Applications</p>
+</li>
+<li>
+<p><strong>（适合）Recent Neural Methods on Slot Filling and Intent Classification for Task-Oriented Dialogue Systems: A Survey.</strong></p>
+</li>
+<li>
+<p>A Survey on Spoken Language Understanding: Recent Advances and New Frontiers</p>
+</li>
+<li>
+<p>A Transformer based Multi-task Model for Domain Classification, Intent Detection and Slot-Filling</p>
+</li>
+<li>
+<p><strong>Multi-Task Pre-Training for Plug-and-Play(即用即插) Task-Oriented Dialogue System</strong></p>
+<p>即插即用型面向任务对话系统的多任务预训练&ndash;第一次见这个提法（<strong>转变成自然语言指令任务</strong>-采用T5大模型）</p>
+<p><a href="https://export.arxiv.org/pdf/2109.14739.pdf">https://export.arxiv.org/pdf/2109.14739.pdf</a></p>
+<p><a href="https://github.com/awslabs/pptod">https://github.com/awslabs/pptod</a></p>
+</li>
+<li>
+<p><strong>（适合）Conversational Question Answering: A Survey.</strong></p>
+</li>
+<li>
+<p>A survey: Conversational Knowledge Base Question Answering</p>
+</li>
+</ul>
+<h2 id="30-任务型对话系统">30 任务型对话系统<a hidden class="anchor" aria-hidden="true" href="#30-任务型对话系统">#</a></h2>
+<ul>
+<li>
+<p>A Large-Scale Benchmark for Chinese Goal-oriented Dialog Evaluation Estimating Soft Labels for Out-of-Domain Intent Detection</p>
+</li>
+<li>
+<p>A GuessWhat?! Game for Goal-Oriented Visual Dialog: A Survey</p>
+</li>
+<li>
+<p>User Utterance Acquisition for Training Task-Oriented Bots: A Review of Challenges, Techniques and Opportunities</p>
+</li>
+<li>
+<p>Estimating Soft Labels for Out-of-Domain Intent Detection</p>
+</li>
+<li>
+<p><strong>(重要－精读)Multi-Task Pre-Training for Plug-and-Play(即用即插) Task-Oriented Dialogue System</strong></p>
+<p><a href="https://export.arxiv.org/pdf/2109.14739.pdf">https://export.arxiv.org/pdf/2109.14739.pdf</a></p>
+<p><a href="https://github.com/awslabs/pptod">https://github.com/awslabs/pptod</a></p>
+<p>学习特定任务的微调</p>
+</li>
+<li>
+<p>A Unified Multi-task Learning Framework for Multi-goal Conversational Recommender Systems</p>
+</li>
+</ul>
+<h2 id="31-基于上下文的回复检索">31 基于上下文的回复检索<a hidden class="anchor" aria-hidden="true" href="#31-基于上下文的回复检索">#</a></h2>
+<p><strong>Learning to Detect Relevant Contexts and Knowledge for Response Selection in Retrieval-based Dialogue Systems</strong></p>
+<p><a href="https://aichatbot.feishu.cn/file/boxcni2xhINHrIfnIkoEIUTWyGg">https://aichatbot.feishu.cn/file/boxcni2xhINHrIfnIkoEIUTWyGg</a></p>
+<p>A Sequential Matching Framework for Multi-turn Response Selection in Retrieval-based Chatbots</p>
+<p><a href="https://export.arxiv.org/pdf/1710.11344.pdf">https://export.arxiv.org/pdf/1710.11344.pdf</a></p>
+<p><strong>对话表示学习-用于检索</strong></p>
+<p><strong>dial2vec: Self-Guided Contrastive Learning of Unsupervised Dialogue Embeddings</strong></p>
+<p>Reasoning With Neural Tensor Networks for Knowledge Base Completion</p>
+<p><a href="https://papers.nips.cc/paper/2013/file/b337e84de8752b27eda3a12363109e80-Paper.pdf">https://papers.nips.cc/paper/2013/file/b337e84de8752b27eda3a12363109e80-Paper.pdf</a></p>
+<p>Multi-hop Selector Network for Multi-turn Response Selection in Retrieval-based Chatbots</p>
+<p><a href="https://github.com/chunyuanY/Dialogue">https://github.com/chunyuanY/Dialogue</a></p>
+<h2 id="32-code生成">32 Code生成<a hidden class="anchor" aria-hidden="true" href="#32-code生成">#</a></h2>
+<p>Repository-Level Prompt Generation for Large Language Models of Code</p>
+<h2 id="33-sql生成">33 SQL生成<a hidden class="anchor" aria-hidden="true" href="#33-sql生成">#</a></h2>
+<p>MIGA: A Unified Multi-task Generation Framework for Conversational Text-to-SQL</p>
+<p><a href="https://arxiv.org/pdf/2212.09278.pdf">https://arxiv.org/pdf/2212.09278.pdf</a></p>
+<h2 id="34-gpt-4">34 GPT-4<a hidden class="anchor" aria-hidden="true" href="#34-gpt-4">#</a></h2>
+<p><a href="https://hub.baai.ac.cn/view/24839">https://hub.baai.ac.cn/view/24839</a></p>
+<p>3月14日，Open AI官网发布GPT-4，支持图像和文本输入，效果超越ChatGPT。</p>
+<p>GPT-4 实现了飞跃式提升：强大的识图能力；文字输入限制提升至 2.5 万字；回答准确性显著提高；能够生成歌词、创意文本，实现风格变化。</p>
+<p>官网地址：<em><a href="https://openai.com/product/gpt-4">https://openai.com/product/gpt-4</a></em></p>
+<p>论文下载：</p>
+<p><a href="https://event-cdn.baai.ac.cn/file/file-browser/BckxAwHQdMdCerFZpXDhhJba6JTWWTZd.pdf">https://event-cdn.baai.ac.cn/file/file-browser/BckxAwHQdMdCerFZpXDhhJba6JTWWTZd.pdf</a></p>
+<p>直播地址：</p>
+<p><a href="https://www.youtube.com/watch?v=outcGtbnMuQ">https://www.youtube.com/watch?v=outcGtbnMuQ</a></p>
+<p>贡献者：
+<a href="https://openai.com/contributions/gpt-4">https://openai.com/contributions/gpt-4</a></p>
+<h2 id="35-chatglm千亿基座的对话模型开启内测-对应单卡版本开源">35 ChatGLM：千亿基座的对话模型开启内测 ⸺对应单卡版本开源<a hidden class="anchor" aria-hidden="true" href="#35-chatglm千亿基座的对话模型开启内测-对应单卡版本开源">#</a></h2>
+<p>ChatGLM-6B 是一个开源的、支持中英双语的对话语言模型，基于 <a href="https://github.com/THUDM/GLM">General Language Model (GLM)</a> 架构，具有 62 亿参数。结合模型量化技术，用户可以在消费级的显卡上进行本地部署（INT4 量化级别下最低只需 6GB 显存）。ChatGLM-6B 使用了和 ChatGPT 相似的技术，针对中文问答和对话进行了优化。经过约 1T 标识符的中英双语训练，辅以监督微调、反馈自助、人类反馈强化学习等技术的加持，62 亿参数的 ChatGLM-6B 已经能生成相当符合人类偏好的回答。</p>
+<p>代码链接：https://github.com/THUDM/ChatGLM-6B.git</p>
+<p>具体来说，ChatGLM-6B具备以下特点：</p>
+<ul>
+<li>**充分的中英双语预训练：**ChatGLM-6B在1:1比例的中英语料上训练了1T的token量，兼具双语能力。</li>
+<li>**优化的模型架构和大小：**吸取GLM-130B训练经验，修正了二维RoPE位置编码实现，使用传统FFN结构。6B（62亿）的参数大小，也使得研究者和个人开发者自己微调和部署ChatGLM-6B成为可能。</li>
+<li>**较低的部署门槛：**FP16 半精度下，ChatGLM-6B 需要至少 13 GB 的显存进行推理，结合模型量化技术，这一需求可以进一步降低到 10GB（INT8） 和 6GB（INT4），使得 ChatGLM-6B 可以部署在消费级显卡上。</li>
+<li>**更长的序列长度：**相比 GLM-10B（序列长度1024），ChatGLM-6B序列长度达2048，支持更长对话和应用。</li>
+<li>**人类意图对齐训练：**使用了监督微调（Supervised Fine-Tuning）、反馈自助（Feedback Bootstrap）、人类反馈强化学习（Reinforcement Learning from Human Feedback）等方式，使模型初具理解人类指令意图的能力。输出格式为markdown，方便展示。</li>
+</ul>
+<p><strong>代码调用</strong></p>
+<p>可以通过如下代码调用 ChatGLM-6B 模型来生成对话：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">&gt;&gt;&gt;</span> <span style="color:#f92672">from</span> transformers <span style="color:#f92672">import</span> AutoTokenizer, AutoModel
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&gt;&gt;&gt;</span> tokenizer <span style="color:#f92672">=</span> AutoTokenizer<span style="color:#f92672">.</span>from_pretrained(<span style="color:#e6db74">&#34;THUDM/chatglm-6b&#34;</span>, trust_remote_code<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&gt;&gt;&gt;</span> model <span style="color:#f92672">=</span> AutoModel<span style="color:#f92672">.</span>from_pretrained(<span style="color:#e6db74">&#34;THUDM/chatglm-6b&#34;</span>, trust_remote_code<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)<span style="color:#f92672">.</span>half()<span style="color:#f92672">.</span>cuda()
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&gt;&gt;&gt;</span> response, history <span style="color:#f92672">=</span> model<span style="color:#f92672">.</span>chat(tokenizer, <span style="color:#e6db74">&#34;你好&#34;</span>, history<span style="color:#f92672">=</span>[])
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&gt;&gt;&gt;</span> print(response)
+</span></span><span style="display:flex;"><span>你好<span style="color:#960050;background-color:#1e0010">👋!</span>我是人工智能助手 ChatGLM<span style="color:#f92672">-</span><span style="color:#ae81ff">6</span>B,很高兴见到你,欢迎问我任何问题<span style="color:#960050;background-color:#1e0010">。</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&gt;&gt;&gt;</span> response, history <span style="color:#f92672">=</span> model<span style="color:#f92672">.</span>chat(tokenizer, <span style="color:#e6db74">&#34;晚上睡不着应该怎么办&#34;</span>, history<span style="color:#f92672">=</span>history)
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&gt;&gt;&gt;</span> print(response)
+</span></span><span style="display:flex;"><span>晚上睡不着可能会让你感到焦虑或不舒服,但以下是一些可以帮助你入睡的方法:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">1.</span> 制定规律的睡眠时间表:保持规律的睡眠时间表可以帮助你建立健康的睡眠习惯,使你更容易入睡<span style="color:#960050;background-color:#1e0010">。</span>尽量在每天的相同时间上床,并在同一时间起床<span style="color:#960050;background-color:#1e0010">。</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">2.</span> 创造一个舒适的睡眠环境:确保睡眠环境舒适,安静,黑暗且温度适宜<span style="color:#960050;background-color:#1e0010">。</span>可以使用舒适的床上用品,并保持房间通风<span style="color:#960050;background-color:#1e0010">。</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">3.</span> 放松身心:在睡前做些放松的活动,例如泡个热水澡,听些轻柔的音乐,阅读一些有趣的书籍等,有助于缓解紧张和焦虑,使你更容易入睡<span style="color:#960050;background-color:#1e0010">。</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">4.</span> 避免饮用含有咖啡因的饮料:咖啡因是一种刺激性物质,会影响你的睡眠质量<span style="color:#960050;background-color:#1e0010">。</span>尽量避免在睡前饮用含有咖啡因的饮料,例如咖啡,茶和可乐<span style="color:#960050;background-color:#1e0010">。</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">5.</span> 避免在床上做与睡眠无关的事情:在床上做些与睡眠无关的事情,例如看电影,玩游戏或工作等,可能会干扰你的睡眠<span style="color:#960050;background-color:#1e0010">。</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">6.</span> 尝试呼吸技巧:深呼吸是一种放松技巧,可以帮助你缓解紧张和焦虑,使你更容易入睡<span style="color:#960050;background-color:#1e0010">。</span>试着慢慢吸气,保持几秒钟,然后缓慢呼气<span style="color:#960050;background-color:#1e0010">。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>如果这些方法无法帮助你入睡,你可以考虑咨询医生或睡眠专家,寻求进一步的建议<span style="color:#960050;background-color:#1e0010">。</span>
+</span></span></code></pre></div><h2 id="36-多模态学习">36 多模态学习<a hidden class="anchor" aria-hidden="true" href="#36-多模态学习">#</a></h2>
+<p><a href="https://zhuanlan.zhihu.com/p/582878508">https://zhuanlan.zhihu.com/p/582878508</a></p>
+<p>多模态对话 Multimodal Dialogue Response Generation</p>
+<p>10:59</p>
+<p>图像＋小模型实现思维链</p>
+<pre tabindex="0"><code>这一篇：
+Multimodal Chain-of-Thought Reasoning in Language Models
+</code></pre><pre tabindex="0"><code>它 就是设计了2个独立的 transformer，语言的和 图像的，然后把他们在 decoder的输入层做了concat，基于任务再做微调。
+</code></pre><pre tabindex="0"><code>没啥新意思，思想跟 知识库适配器 那一篇是一致的。
+K-Adapter: Infusing Knowledge into Pre-Trained Models with Adapters. （多知识源挂载的）
+</code></pre><blockquote>
+<p>该论文提出了一个为多模态设计的概率建模框架 UniDiffuser，除了单向的文生图，还能实现图生文、图文联合生成、无条件图文生成、图文改写等多种功能。</p>
+</blockquote>
+<p>据悉 GPT-4 将于本周发布，多模态将成为其一大亮点。当前的大语言模型正在成为理解各种模态的通用接口，能够根据不同模态信息来给出回复文本，但大语言模型生成的内容也仅仅局限于文本。另一方面，当前的扩散模型 DALL・E 2、Imagen、Stable Diffusion 等在视觉创作上掀起一场革命，但这些模型仅仅支持文到图的单一跨模态功能，离通用式生成模型还有一定距离。而多模态大模型将能够打通各种模态能力，实现任意模态之间转化，被认为是通用式生成模型的未来发展方向。</p>
+<p>清华大学计算机系朱军教授带领的 TSAIL 团队近期公开的一篇论文《One Transformer Fits All Distributions in Multi-Modal Diffusion at Scale》，率先发布了对多模态生成式模型的一些探索工作，实现了任意模态之间的相互转化。</p>
+<p><img loading="lazy" src="0dd7912397dda1446b3469d529c60ba90cf48611.png" alt="img"  />
+</p>
+<p>论文链接：
+<a href="https://ml.cs.tsinghua.edu.cn/diffusion/unidiffuser.pdf">https://ml.cs.tsinghua.edu.cn/diffusion/unidiffuser.pdf</a></p>
+<p>开源代码：
+<a href="https://github.com/thu-ml/unidiffuser">https://github.com/thu-ml/unidiffuser</a></p>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2023 <a href="http://example.org/">My New Hugo Site</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

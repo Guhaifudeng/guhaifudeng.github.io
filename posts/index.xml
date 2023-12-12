@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Posts on My New Hugo Site</title>
+    <link>http://example.org/posts/</link>
+    <description>Recent content in Posts on My New Hugo Site</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 07 Jul 2023 11:49:51 +0800</lastBuildDate><atom:link href="http://example.org/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>基于DL的NLP技术路线分析及相关材料</title>
+      <link>http://example.org/posts/my-first-post/</link>
+      <pubDate>Fri, 07 Jul 2023 11:49:51 +0800</pubDate>
+      
+      <guid>http://example.org/posts/my-first-post/</guid>
+      <description>基于DL的NLP技术路线分析及相关材料v1.0222 声明:本文档内容仅是个人理解，不对术语的专业性负责，仅供参考。
+1 DL NLP技术范式简史 深度学习在自然语言处理领域的技术范式可分为以下四个阶段：
+第一阶段，词/字向量+特定任务网络结构设计
+侧重点：特定任务的网络设计+数据工程
+代表模型: 阅读理解任务的BiDAF、QANET;文本匹配的DSSM、ARC-I;机器翻译的nmt等
+第二阶段，基于BERT+特定任务输出层网络结构设计
+侧重点：目标函数的设计+数据工程
+代表模型：BERT、MacBert、XLNET等
+出发点：
+语义任务的解决，需要复杂的网络； 复杂的网络，需要更高的标注数据成本； 采用有监督的语言模型进行预训练，可以降低数据成本并提升性能。 第三阶段，基于LLM(大规模语言模型)的面向目标任务形式prompt工程
+侧重点:prompt工程+多任务学习+数据工程
+代表模型:GODEL、UIE等
+出发点：
+目标任务没有很好地利用语言模型的性能 LLM模型微调成本高 从适应下游任务转变为适应语言模型，以实现多任务学习的一般化（又名:统一建模） 第四阶段，面向instruct的LLM的任务学习能力
+侧重点:任务迁移+安全性+数据工程
+代表模型：T0、FLAN、instructGPT、SUP-NATINST等
+出发点：
+语言模型具备跨任务能力迁移的能力 跨任务的能力习得需要更多的数据（相比于预训练数据规模太小了） 数据增强的两个思路： 基于instruct学习的方式重构更多的任务，如SUP-NATINST 直接基于instruct进行仿人类回复，如instructGPT 对AI系统的可解释性和安全性提出要求 2 语言模型 概述论文
+A Survey of Transformers [2021]
+https://export.arxiv.org/pdf/2106.04554.pdf
+Efficient Transformers: A Survey [2020]
+http://export.arxiv.org/pdf/2009.06732v3.pdf
+Pre-Trained Models: Past, Present and Future [2021]
+https://export.arxiv.org/pdf/2106.07139.pdf
+A Survey on Knowledge-Enhanced Pre-trained Language Models [2022]
+https://export.arxiv.org/pdf/2212.13428v1.pdf
+Recent Advances in Natural Language Processing via Large Pre-Trained Language Models: A Survey [2021]</description>
+    </item>
+    
+  </channel>
+</rss>
